@@ -262,16 +262,14 @@ export default function HomePage({
                 ['Step 2', 'Choose Your Nanny', '/images/step-2.png', 'Choose nanny'],
                 ['Step 3', 'Secure Booking', '/images/step-3.png', 'Book securely'],
                 ['Step 4', 'Enjoy Your Holiday', '/images/step-4.png', 'Enjoy holiday'],
-              ].map(([label, title, src, alt], i) => (
-                <div className="process-step" key={title} style={{ display: 'contents' }}>
-                  {i > 0 && <div className="process-arrow">→</div>}
-                  <div className="process-step">
-                    <div className="process-step-label">{label}</div>
-                    <div className="process-step-title">{title}</div>
-                    <img src={src} alt={alt} className="process-phone-image" />
-                  </div>
-                </div>
-              ))}
+              ].flatMap(([label, title, src, alt], i) => [
+                i > 0 ? <div className="process-arrow" key={`a${i}`}>→</div> : null,
+                <div className="process-step" key={title}>
+                  <div className="process-step-label">{label}</div>
+                  <div className="process-step-title">{title}</div>
+                  <img src={src} alt={alt} className="process-phone-image" />
+                </div>,
+              ])}
             </div>
           </div>
         </section>
