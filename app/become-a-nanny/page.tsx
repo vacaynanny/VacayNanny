@@ -115,18 +115,18 @@ function PhoneInput({
 function UploadBox({
   label, hint, name, onFile,
 }: {
-  label: string; hint?: string; name: string; onFile: (name: string, hasFile: boolean) => void;
+  label: string; hint?: string; name: string; onFile: (name: string, file: File | null) => void;
 }) {
   const [filename, setFilename] = useState('')
   return (
     <div className={`upload-box${filename ? ' uploaded' : ''}`}>
       <input
         type="file"
-        accept=".pdf,.jpg,.jpeg,.png"
+        accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*"
         onChange={e => {
-          const f = e.target.files?.[0]?.name || ''
-          setFilename(f)
-          onFile(name, !!f)
+          const file = e.target.files?.[0] || null
+          setFilename(file?.name || '')
+          onFile(name, file)
         }}
       />
       <div className="upload-icon">{filename ? '✅' : '📁'}</div>
@@ -160,6 +160,7 @@ export default function BecomeANanny() {
   const [idNumber, setIdNumber] = useState('')
   const [kraPin, setKraPin] = useState('')
   const [uploads, setUploads] = useState<Record<string, boolean>>({})
+  const [files, setFiles] = useState<Record<string, File>>({})
 
   // Step 3 – Background
   const [cogcStatus, setCogcStatus] = useState('')
@@ -238,8 +239,14 @@ export default function BecomeANanny() {
     set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
   }
 
-  function handleUpload(name: string, hasFile: boolean) {
-    setUploads(u => ({ ...u, [name]: hasFile }))
+  function handleUpload(name: string, file: File | null) {
+    setUploads(u => ({ ...u, [name]: !!file }))
+    setFiles(f => {
+      const next = { ...f }
+      if (file) next[name] = file
+      else delete next[name]
+      return next
+    })
   }
 
   // ── Validate each step ──
@@ -261,7 +268,10 @@ export default function BecomeANanny() {
     }
     if (step === 1) {
       if (!idNumber.trim()) errs.push('National ID number is required.')
-      if (!uploads['nationalId']) errs.push('National ID photo is required.')
+      if (!uploads['nationalId']) errs.push('National ID front photo is required.')
+      if (!uploads['nationalIdBack']) errs.push('National ID back photo is required.')
+      if (!uploads['headshot']) errs.push('A passport-style photo is required.')
+      if (!uploads['selfie']) errs.push('An identity selfie holding your ID is required.')
     }
     if (step === 2) {
       if (!cogcStatus) errs.push('Police clearance status is required.')
@@ -335,13 +345,31 @@ export default function BecomeANanny() {
       preferredLocations: prefLocations,
       comfortablePets: comfortPets,
       comfortableMultiple: comfortMultiple,
+      swimming,
+      cooking,
+      tutoring,
+      driving,
+      specialNeeds,
+      consentBackground: consent1,
+      consentTerms: consent2,
+      consentAccuracy: consent3,
     }
     try {
-      const res = await fetch('/api/apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      const fd = new FormData()
+      fd.append('payload', JSON.stringify(payload))
+      const map: Record<string, string> = {
+        headshot: 'photo',
+        nationalId: 'id_front',
+        nationalIdBack: 'id_back',
+        selfie: 'selfie',
+        cogc: 'cogc',
+        passport: 'passport',
+        certs: 'certificate',
+      }
+      Object.entries(files).forEach(([key, file]) => {
+        fd.append(map[key] || key, file)
       })
+      const res = await fetch('/api/apply', { method: 'POST', body: fd })
       if (res.ok) {
         setSubmitted(true)
         sessionStorage.removeItem('vn_nanny_form')
@@ -613,6 +641,17 @@ export default function BecomeANanny() {
               <UploadBox
                 name="headshot" label="Upload a clear headshot photo"
                 hint="JPG or PNG · Professional photo preferred · Max 5MB" onFile={handleUpload}
+              />
+            </div>
+
+            <div className="form-card">
+              <h3>Identity selfie <span className="req">*</span></h3>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
+                Hold your National ID next to your face. Good lighting, face clearly visible.
+              </p>
+              <UploadBox
+                name="selfie" label="Upload identity selfie"
+                hint="JPG or PNG · Face and ID both visible" onFile={handleUpload}
               />
             </div>
 
@@ -1125,7 +1164,7 @@ export default function BecomeANanny() {
                 onClick={() => setConsent2(c => !c)}
               >
                 <div className={`consent-box${consent2 ? ' checked' : ''}`}>{consent2 ? '✓' : ''}</div>
-                <span className="consent-text">I agree to VacayNanny's <a href="#" style={{ color: 'var(--coral)' }}>Terms of Service</a> and <a href="#" style={{ color: 'var(--coral)' }}>Privacy Policy</a>, including the use of my data for matching me with families. <span className="req">*</span></span>
+                <span className="consent-text">I agree to VacayNanny&apos;s <a href="/terms" style={{ color: 'var(--coral)' }}>Terms of Service</a> and <a href="/privacy" style={{ color: 'var(--coral)' }}>Privacy Policy</a>, including the use of my data for matching me with families. <span className="req">*</span></span>
               </div>
               <div
                 className={`consent-item${consent3 ? ' checked' : ''}`}
