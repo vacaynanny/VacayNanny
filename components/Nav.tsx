@@ -8,10 +8,9 @@ import { hasSupabaseConfig } from '@/lib/supabase'
 
 type NavProps = {
   onBook?: () => void
-  variant?: 'home' | 'inner'
 }
 
-export default function Nav({ onBook, variant = 'inner' }: NavProps) {
+export default function Nav({ onBook }: NavProps) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [signedIn, setSignedIn] = useState(false)

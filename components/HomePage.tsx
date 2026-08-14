@@ -155,7 +155,7 @@ export default function HomePage({
     <>
       <OceanCanvas />
       <div className="site-wrap">
-        <Nav onBook={() => openBook()} variant="home" />
+        <Nav onBook={() => openBook()} />
 
         <section className="hero">
           <div className="hero-bg" />

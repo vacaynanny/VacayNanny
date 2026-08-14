@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { sendApplicationEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
-import { slugify, normalizeTier, TIER_RATES } from '@/lib/constants'
+import { slugify } from '@/lib/constants'
 import type { DocumentKind, NannyTier } from '@/lib/types'
 
 const FILE_FIELDS: { form: string; kind: DocumentKind }[] = [
@@ -187,5 +187,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
-export { estimateTier, TIER_RATES, normalizeTier }

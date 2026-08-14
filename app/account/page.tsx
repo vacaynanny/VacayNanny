@@ -14,7 +14,7 @@ export default async function AccountPage() {
     const supabase = createServerClient()
     const { data } = await supabase
       .from('bookings')
-      .select('*, nannies(id, display_name, slug, photo_url, tier)')
+      .select('*')
       .or(`parent_id.eq.${profile.id},email.eq.${profile.email}`)
       .order('created_at', { ascending: false })
     bookings = (data || []) as Booking[]
@@ -42,7 +42,7 @@ export default async function AccountPage() {
               <span className="review-key">
                 {b.destination} · {b.check_in} → {b.check_out}
                 <br />
-                <small style={{ color: 'rgba(255,255,255,0.4)' }}>{b.status}{b.nannies ? ` · ${b.nannies.display_name}` : ''}</small>
+                <small style={{ color: 'rgba(255,255,255,0.4)' }}>{b.status}</small>
               </span>
               <span className="review-val">{b.tier || 'Any tier'}</span>
             </div>
