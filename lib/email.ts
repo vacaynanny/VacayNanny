@@ -1,9 +1,27 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const ADMIN_EMAIL = 'hello@vacaynanny.net'
 const FROM_ADDRESS = 'VacayNanny <noreply@vacaynanny.net>'
+
+function getResend() {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return null
+  return new Resend(key)
+}
+
+async function sendOrSkip(payload: {
+  from: string
+  to: string
+  subject: string
+  html: string
+}) {
+  const resend = getResend()
+  if (!resend) {
+    console.warn('RESEND_API_KEY is not set — skipping email')
+    return { data: null, error: null }
+  }
+  return resend.emails.send(payload)
+}
 
 // ── Shared wrapper ──────────────────────────────────────────────────────────
 
@@ -147,13 +165,13 @@ export async function sendBookingEmails(data: {
   `)
 
   const [parentResult, adminResult] = await Promise.all([
-    resend.emails.send({
+    sendOrSkip({
       from: FROM_ADDRESS,
       to: data.email,
       subject: `Your VacayNanny booking request — ${data.destination}`,
       html: parentHtml,
     }),
-    resend.emails.send({
+    sendOrSkip({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
       subject: `[Booking] ${data.parentName} → ${data.destination} (${data.tier})`,
@@ -251,13 +269,13 @@ export async function sendApplicationEmails(data: {
   `)
 
   const [nannyResult, adminResult] = await Promise.all([
-    resend.emails.send({
+    sendOrSkip({
       from: FROM_ADDRESS,
       to: data.email,
       subject: 'Your VacayNanny application has been received',
       html: nannyHtml,
     }),
-    resend.emails.send({
+    sendOrSkip({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
       subject: `[Application] ${data.fullName} — ${data.county}`,
