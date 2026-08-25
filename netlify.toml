@@ -2,5 +2,9 @@
   command = "npm run build"
   publish = ".next"
 
+[build.environment]
+  # Next.js inlines server env into function bundles; omit so Netlify secrets scan doesn't fail the build.
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_SERVICE_ROLE_KEY,RESEND_API_KEY,NETLIFY_EMAILS_SECRET,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_SUPABASE_URL"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"

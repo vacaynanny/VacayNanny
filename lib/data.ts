@@ -1,12 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 import { hasSupabaseConfig } from '@/lib/supabase'
+import { withTimeout } from '@/lib/withTimeout'
 import type { Destination, Nanny, Review } from '@/lib/types'
+
+/** Keep pages snappy when Supabase is paused/unreachable. */
+const DATA_MS = 2000
 
 function publicClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (input, init) =>
+          fetch(input, { ...init, signal: AbortSignal.timeout(DATA_MS) }),
+      },
+    }
   )
 }
 
@@ -215,15 +225,26 @@ export type NannyFilters = {
 }
 
 export async function getNannies(filters: NannyFilters = {}): Promise<Nanny[]> {
-  if (!hasSupabaseConfig()) return filterLocal(FALLBACK_NANNIES, filters)
-  try {
-    const supabase = publicClient()
-    const { data, error } = await supabase.from('nannies').select('*').eq('is_active', true).order('rating_avg', { ascending: false })
-    if (error || !data?.length) return filterLocal(FALLBACK_NANNIES, filters)
-    return filterLocal(data as Nanny[], filters)
-  } catch {
-    return filterLocal(FALLBACK_NANNIES, filters)
-  }
+  const local = filterLocal(FALLBACK_NANNIES, filters)
+  if (!hasSupabaseConfig()) return local
+  return withTimeout(
+    (async () => {
+      try {
+        const supabase = publicClient()
+        const { data, error } = await supabase
+          .from('nannies')
+          .select('*')
+          .eq('is_active', true)
+          .order('rating_avg', { ascending: false })
+        if (error || !data?.length) return local
+        return filterLocal(data as Nanny[], filters)
+      } catch {
+        return local
+      }
+    })(),
+    DATA_MS,
+    local,
+  )
 }
 
 function filterLocal(list: Nanny[], filters: NannyFilters) {
@@ -253,26 +274,47 @@ export async function getNannyBySlug(slug: string): Promise<Nanny | null> {
 
 export async function getDestinations(): Promise<Destination[]> {
   if (!hasSupabaseConfig()) return FALLBACK_DESTINATIONS
-  try {
-    const supabase = publicClient()
-    const { data, error } = await supabase.from('destinations').select('*').eq('is_active', true).order('sort_order')
-    if (error || !data?.length) return FALLBACK_DESTINATIONS
-    return data as Destination[]
-  } catch {
-    return FALLBACK_DESTINATIONS
-  }
+  return withTimeout(
+    (async () => {
+      try {
+        const supabase = publicClient()
+        const { data, error } = await supabase
+          .from('destinations')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order')
+        if (error || !data?.length) return FALLBACK_DESTINATIONS
+        return data as Destination[]
+      } catch {
+        return FALLBACK_DESTINATIONS
+      }
+    })(),
+    DATA_MS,
+    FALLBACK_DESTINATIONS,
+  )
 }
 
 export async function getReviews(limit = 6): Promise<Review[]> {
   if (!hasSupabaseConfig()) return FALLBACK_REVIEWS
-  try {
-    const supabase = publicClient()
-    const { data, error } = await supabase.from('reviews').select('*').eq('is_published', true).order('created_at', { ascending: false }).limit(limit)
-    if (error || !data?.length) return FALLBACK_REVIEWS
-    return data as Review[]
-  } catch {
-    return FALLBACK_REVIEWS
-  }
+  return withTimeout(
+    (async () => {
+      try {
+        const supabase = publicClient()
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+          .limit(limit)
+        if (error || !data?.length) return FALLBACK_REVIEWS
+        return data as Review[]
+      } catch {
+        return FALLBACK_REVIEWS
+      }
+    })(),
+    DATA_MS,
+    FALLBACK_REVIEWS,
+  )
 }
 
 export async function getReviewsForNanny(nannyId: string): Promise<Review[]> {
@@ -282,14 +324,25 @@ export async function getReviewsForNanny(nannyId: string): Promise<Review[]> {
   if (!hasSupabaseConfig()) {
     return FALLBACK_REVIEWS.filter(r => r.nanny_id === nannyId)
   }
-  try {
-    const supabase = publicClient()
-    const { data, error } = await supabase.from('reviews').select('*').eq('nanny_id', nannyId).eq('is_published', true).order('created_at', { ascending: false })
-    if (error) return []
-    return (data || []) as Review[]
-  } catch {
-    return []
-  }
+  return withTimeout(
+    (async () => {
+      try {
+        const supabase = publicClient()
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .eq('nanny_id', nannyId)
+          .eq('is_published', true)
+          .order('created_at', { ascending: false })
+        if (error) return []
+        return (data || []) as Review[]
+      } catch {
+        return []
+      }
+    })(),
+    DATA_MS,
+    [],
+  )
 }
 
 export function destinationNannyCount(nannies: Nanny[], name: string) {

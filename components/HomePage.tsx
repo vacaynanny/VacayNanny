@@ -17,42 +17,64 @@ function OceanCanvas() {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    // Skip expensive animation on low-power / reduced-motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const ctx = canvas.getContext('2d')!
     let raf = 0
     let t = 0
+    let last = 0
+    let visible = !document.hidden
     function resize() {
-      canvas!.width = window.innerWidth
-      canvas!.height = window.innerHeight
+      // Cap DPR so retina phones don't paint 4x pixels
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
+      const w = window.innerWidth
+      const h = window.innerHeight
+      canvas!.width = Math.floor(w * dpr)
+      canvas!.height = Math.floor(h * dpr)
+      canvas!.style.width = w + 'px'
+      canvas!.style.height = h + 'px'
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
     resize()
     window.addEventListener('resize', resize)
+    function onVis() {
+      visible = !document.hidden
+      if (visible && !raf) loop(performance.now())
+    }
+    document.addEventListener('visibilitychange', onVis)
     function drawWave(yBase: number, amp: number, freq: number, speed: number, r: number, g: number, b: number, alpha: number) {
       ctx.beginPath()
-      ctx.moveTo(0, canvas!.height)
-      for (let x = 0; x <= canvas!.width; x += 4) {
+      ctx.moveTo(0, canvas!.clientHeight)
+      for (let x = 0; x <= canvas!.clientWidth; x += 8) {
         const y = yBase + Math.sin(x * freq + t * speed) * amp + Math.sin(x * freq * 0.7 + t * speed * 1.3 + 1) * amp * 0.55
         ctx.lineTo(x, y)
       }
-      ctx.lineTo(canvas!.width, canvas!.height)
+      ctx.lineTo(canvas!.clientWidth, canvas!.clientHeight)
       ctx.closePath()
       ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`
       ctx.fill()
     }
-    function draw() {
-      ctx.clearRect(0, 0, canvas!.width, canvas!.height)
-      const h = canvas!.height
-      drawWave(h * 0.72, 22, 0.008, 0.6, 45, 125, 111, 0.10)
-      drawWave(h * 0.78, 16, 0.012, 0.8, 26, 46, 53, 0.12)
-      drawWave(h * 0.82, 12, 0.016, 1.0, 45, 125, 111, 0.09)
-      drawWave(h * 0.87, 8, 0.020, 1.2, 26, 46, 53, 0.08)
-      drawWave(h * 0.91, 5, 0.025, 1.4, 2, 12, 20, 0.18)
-      t += 0.012
-      raf = requestAnimationFrame(draw)
+    function loop(now: number) {
+      raf = 0
+      if (!visible) return
+      // ~30fps is enough for background waves
+      if (now - last >= 33) {
+        last = now
+        ctx.clearRect(0, 0, canvas!.clientWidth, canvas!.clientHeight)
+        const h = canvas!.clientHeight
+        drawWave(h * 0.72, 22, 0.008, 0.6, 45, 125, 111, 0.10)
+        drawWave(h * 0.78, 16, 0.012, 0.8, 26, 46, 53, 0.12)
+        drawWave(h * 0.82, 12, 0.016, 1.0, 45, 125, 111, 0.09)
+        drawWave(h * 0.87, 8, 0.020, 1.2, 26, 46, 53, 0.08)
+        t += 0.018
+      }
+      raf = requestAnimationFrame(loop)
     }
-    draw()
+    raf = requestAnimationFrame(loop)
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [])
   return <canvas ref={canvasRef} id="ocean-bg" />

@@ -7,6 +7,8 @@ export const metadata = {
   description: 'Browse vetted holiday nannies across Kenya and beyond.',
 }
 
+export const revalidate = 60
+
 export default async function NanniesPage() {
   const nannies = await getNannies()
   return (

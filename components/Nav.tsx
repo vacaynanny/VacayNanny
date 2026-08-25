@@ -10,6 +10,14 @@ type NavProps = {
   onBook?: () => void
 }
 
+function hasClientAuthCookie() {
+  if (typeof document === 'undefined') return false
+  return document.cookie.split(';').some(c => {
+    const n = c.trim()
+    return n.startsWith('sb-') || n.includes('auth-token')
+  })
+}
+
 export default function Nav({ onBook }: NavProps) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -20,20 +28,56 @@ export default function Nav({ onBook }: NavProps) {
   useEffect(() => {
     function onScroll() { setScrolled(window.scrollY > 40) }
     onScroll()
-    window.addEventListener('scroll', onScroll)
+    window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   useEffect(() => {
-    if (!hasSupabaseConfig()) return
+    // Skip network when nobody is signed in — keeps login/signup snappy
+    if (!hasSupabaseConfig() || !hasClientAuthCookie()) {
+      setSignedIn(false)
+      setRole(null)
+      return
+    }
+    let cancelled = false
     const supabase = createSupabaseBrowser()
+    const timer = window.setTimeout(() => {
+      if (!cancelled) {
+        setSignedIn(false)
+        setRole(null)
+      }
+    }, 2000)
+
     supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelled) return
+      window.clearTimeout(timer)
       setSignedIn(!!data.user)
       if (data.user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle()
-        setRole(profile?.role ?? 'parent')
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .maybeSingle()
+          if (!cancelled) setRole(profile?.role ?? 'parent')
+        } catch {
+          if (!cancelled) setRole('parent')
+        }
+      } else {
+        setRole(null)
       }
-    }).catch(() => {})
+    }).catch(() => {
+      if (!cancelled) {
+        window.clearTimeout(timer)
+        setSignedIn(false)
+        setRole(null)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
   }, [pathname])
 
   const hash = (id: string) => (pathname === '/' ? `#${id}` : `/#${id}`)
