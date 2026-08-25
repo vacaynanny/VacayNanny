@@ -59,22 +59,56 @@ export default function SignupPage() {
             <p style={{ color: 'rgba(255,255,255,0.6)' }}>We sent a confirmation link to {email}. After confirming, you can sign in.</p>
           </div>
         ) : (
-          <form className="auth-card" onSubmit={submit}>
+          <form className="auth-card" onSubmit={submit} autoComplete="on">
             <div className="field">
-              <label>Full name</label>
-              <input required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Smith" />
+              <label htmlFor="signup-name">Full name</label>
+              <input
+                id="signup-name"
+                type="text"
+                name="name"
+                autoComplete="name"
+                required
+                value={fullName}
+                onChange={e => setFullName(e.target.value)}
+                placeholder="Jane Smith"
+              />
             </div>
             <div className="field">
-              <label>Email</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} />
+              <label htmlFor="signup-email">Email</label>
+              <input
+                id="signup-email"
+                type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
+                required
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@email.com"
+              />
             </div>
             <div className="field">
-              <label>Password</label>
-              <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} />
+              <label htmlFor="signup-password">Password</label>
+              <input
+                id="signup-password"
+                type="password"
+                name="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+              />
             </div>
             <div className="field">
-              <label>I am a</label>
-              <select value={role} onChange={e => setRole(e.target.value as 'parent' | 'nanny')}>
+              <label htmlFor="signup-role">I am a</label>
+              <select
+                id="signup-role"
+                name="role"
+                value={role}
+                onChange={e => setRole(e.target.value as 'parent' | 'nanny')}
+              >
                 <option value="parent">Parent booking childcare</option>
                 <option value="nanny">Nanny applying to join</option>
               </select>

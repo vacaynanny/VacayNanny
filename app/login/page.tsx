@@ -46,14 +46,33 @@ function LoginForm() {
           <h1>Sign <em>in</em></h1>
           <p>Parents, nannies and the VacayNanny team use the same login.</p>
         </section>
-        <form className="auth-card" onSubmit={submit}>
+        <form className="auth-card" onSubmit={submit} autoComplete="on">
           <div className="field">
-            <label>Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@email.com" />
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
+              required
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@email.com"
+            />
           </div>
           <div className="field">
-            <label>Password</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} />
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Your password"
+            />
           </div>
           {error && <p className="field-error-msg">{error}</p>}
           <button className="btn-submit" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
