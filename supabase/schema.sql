@@ -201,6 +201,16 @@ create table if not exists public.bookings (
   notes             text,
   status            public.booking_status not null default 'pending',
   total_amount_kes  int,
+  care_type         text not null default 'standard',
+  parent_confirmed_at timestamptz,
+  nanny_response    text,
+  nanny_responded_at timestamptz,
+  cancelled_at      timestamptz,
+  cancellation_reason text,
+  refund_percent    int,
+  replacement_requested_at timestamptz,
+  replacement_fulfilled_at timestamptz,
+  replaced_nanny_id uuid references public.nannies(id) on delete set null,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -505,3 +515,31 @@ create policy "nanny_documents_admin_write" on storage.objects
 
 -- Service-role uploads from Next.js API routes bypass RLS.
 -- Anon/authenticated clients cannot write identity documents directly.
+
+-- ── Booking lifecycle columns (safe to re-run on existing projects) ──────────
+
+alter table public.bookings add column if not exists care_type text not null default 'standard';
+alter table public.bookings add column if not exists parent_confirmed_at timestamptz;
+alter table public.bookings add column if not exists nanny_response text;
+alter table public.bookings add column if not exists nanny_responded_at timestamptz;
+alter table public.bookings add column if not exists cancelled_at timestamptz;
+alter table public.bookings add column if not exists cancellation_reason text;
+alter table public.bookings add column if not exists refund_percent int;
+alter table public.bookings add column if not exists replacement_requested_at timestamptz;
+alter table public.bookings add column if not exists replacement_fulfilled_at timestamptz;
+alter table public.bookings add column if not exists replaced_nanny_id uuid;
+
+alter table public.bookings drop constraint if exists bookings_care_type_check;
+alter table public.bookings
+  add constraint bookings_care_type_check
+  check (care_type in ('standard', 'extended', 'overnight'));
+
+alter table public.bookings drop constraint if exists bookings_nanny_response_check;
+alter table public.bookings
+  add constraint bookings_nanny_response_check
+  check (nanny_response is null or nanny_response in ('pending', 'accepted', 'declined'));
+
+alter table public.bookings drop constraint if exists bookings_replaced_nanny_id_fkey;
+alter table public.bookings
+  add constraint bookings_replaced_nanny_id_fkey
+  foreign key (replaced_nanny_id) references public.nannies(id) on delete set null;

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
-import { sendBookingEmails } from '@/lib/email'
+import { notifyBookingEvent, sendBookingEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
-import { TIER_RATES, normalizeTier } from '@/lib/constants'
+import { careTypeLabel, parseCareType, quoteBooking } from '@/lib/booking'
+import { findNannyClashes, jsonFromBookingError } from '@/lib/booking-ops'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
     const nanniesNeeded = String(body.nanniesNeeded || '1')
     const tier = String(body.tier || '')
     const notes = String(body.notes || body.message || '')
+    const careType = parseCareType(body.careType)
     const nannyId = body.nannyId && !String(body.nannyId).startsWith('fallback-')
       ? String(body.nannyId)
       : null
@@ -36,15 +38,43 @@ export async function POST(request: NextRequest) {
       parentId = user?.id ?? null
     } catch {}
 
-    const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000) || 1)
-    const rate = TIER_RATES[normalizeTier(tier) || 'bronze']
-    const total = rate * nights
-
     if (!hasSupabaseConfig() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return NextResponse.json({ error: 'Booking storage is not configured yet.' }, { status: 503 })
     }
 
     const supabase = createServerClient()
+
+    let dailyRateKes: number | null = null
+    let nannyName: string | null = null
+    let nannyEmail: string | null = null
+    if (nannyId) {
+      const { data } = await supabase.from('nannies').select('daily_rate_kes, display_name, user_id').eq('id', nannyId).maybeSingle()
+      dailyRateKes = data?.daily_rate_kes ?? null
+      nannyName = data?.display_name ?? null
+      if (data?.user_id) {
+        const { data: profile } = await supabase.from('profiles').select('email').eq('id', data.user_id).maybeSingle()
+        nannyEmail = profile?.email ?? null
+      }
+      const clashes = await findNannyClashes(supabase, nannyId, checkIn, checkOut)
+      if (clashes.length) {
+        return NextResponse.json({
+          error: 'That nanny is already booked for overlapping dates. Pick different dates or another nanny.',
+          clashes,
+        }, { status: 409 })
+      }
+    }
+
+    const quote = quoteBooking({
+      checkIn,
+      checkOut,
+      careType,
+      tier: tier || undefined,
+      nanniesNeeded,
+      dailyRateKes,
+    })
+    const total = quote.total
+
+    const assigned = Boolean(nannyId)
     const { error } = await supabase.from('bookings').insert([{
       parent_id: parentId,
       nanny_id: nannyId,
@@ -59,9 +89,11 @@ export async function POST(request: NextRequest) {
       nannies_needed: nanniesNeeded,
       tier: tier || null,
       notes: notes || null,
-      status: 'pending',
+      status: assigned ? 'matched' : 'pending',
+      nanny_response: assigned ? 'pending' : null,
+      care_type: careType,
       total_amount_kes: total,
-    }])
+    }]).select('id').maybeSingle()
 
     if (error) {
       console.error('Supabase booking error:', error)
@@ -80,9 +112,24 @@ export async function POST(request: NextRequest) {
       message: notes,
     }).catch(err => console.error('sendBookingEmails failed:', err))
 
-    return NextResponse.json({ success: true }, { status: 200 })
+    if (assigned) {
+      notifyBookingEvent('matched', {
+        parentName,
+        parentEmail: email,
+        nannyName,
+        nannyEmail,
+        destination,
+        checkIn,
+        checkOut,
+        careType: careTypeLabel(careType),
+        status: 'matched',
+        totalKes: total,
+        note: 'Family requested this nanny',
+      }).catch(err => console.error('notifyBookingEvent matched failed:', err))
+    }
+
+    return NextResponse.json({ success: true, total, careType }, { status: 200 })
   } catch (err) {
-    console.error('Booking route error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return jsonFromBookingError(err)
   }
 }

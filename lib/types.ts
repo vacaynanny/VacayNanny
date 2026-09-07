@@ -2,6 +2,8 @@ export type UserRole = 'parent' | 'nanny' | 'admin'
 export type NannyTier = 'bronze' | 'silver' | 'gold'
 export type ApplicationStatus = 'pending' | 'reviewing' | 'interview' | 'approved' | 'rejected'
 export type BookingStatus = 'pending' | 'matched' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+export type CareType = 'standard' | 'extended' | 'overnight'
+export type NannyResponse = 'pending' | 'accepted' | 'declined'
 export type DocumentKind =
   | 'photo'
   | 'id_front'
@@ -86,8 +88,19 @@ export type Booking = {
   notes: string | null
   status: BookingStatus
   total_amount_kes: number | null
+  care_type: CareType
+  parent_confirmed_at: string | null
+  nanny_response: NannyResponse | null
+  nanny_responded_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  refund_percent: number | null
+  replacement_requested_at: string | null
+  replacement_fulfilled_at: string | null
+  replaced_nanny_id: string | null
   created_at: string
-  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier'> | null
+  updated_at?: string
+  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier' | 'daily_rate_kes'> | null
 }
 
 export type NannyApplication = {
@@ -168,4 +181,5 @@ export type BookingPayload = {
   notes?: string
   message?: string
   nannyId?: string
+  careType?: CareType
 }

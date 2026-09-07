@@ -29,7 +29,7 @@ export default async function AdminPage() {
       <section className="page-hero">
         <div className="eyebrow">Ops</div>
         <h1>Vetting &amp; <em>bookings</em></h1>
-        <p>Approve applications to publish live nanny profiles. Match pending family requests.</p>
+        <p>Approve applications, match families, check clashes, and run the 2-hour replacement clock. Status changes email the family and nanny.</p>
       </section>
       <div className="sec-inner" style={{ paddingBottom: 8 }}>
         <SignOutButton />

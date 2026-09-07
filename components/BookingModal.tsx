@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { DESTINATIONS } from '@/lib/constants'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
+import { CARE_TYPES, parseCareType, quoteBooking, quoteSummary } from '@/lib/booking'
+import type { CareType } from '@/lib/types'
 
 export type BookingDefaults = {
   destination?: string
@@ -34,6 +36,7 @@ export default function BookingModal({
     youngestAge: '',
     nanniesNeeded: '1',
     tier: defaults?.tier || '',
+    careType: 'standard' as CareType,
     notes: '',
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
@@ -66,7 +69,11 @@ export default function BookingModal({
   }, [open])
 
   function change(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+    const { name, value } = e.target
+    setForm(f => ({
+      ...f,
+      [name]: name === 'careType' ? parseCareType(value) : value,
+    }))
   }
 
   async function submit(e: React.FormEvent) {
@@ -88,6 +95,7 @@ export default function BookingModal({
           youngestAge: form.youngestAge,
           nanniesNeeded: form.nanniesNeeded,
           tier: form.tier,
+          careType: form.careType,
           notes: form.notes,
           nannyId: defaults?.nannyId,
         }),
@@ -201,6 +209,26 @@ export default function BookingModal({
                     <option value="gold">Gold (Elite)</option>
                   </select>
                 </div>
+              </div>
+              <div className="mfield" style={{ marginBottom: '1rem' }}>
+                <label>Care package</label>
+                <select name="careType" value={form.careType} onChange={change}>
+                  {CARE_TYPES.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+                <p className="modal-hint">{CARE_TYPES.find(c => c.id === form.careType)?.hint}</p>
+              </div>
+              <div className="quote-line">
+                {form.checkIn && form.checkOut
+                  ? quoteSummary(quoteBooking({
+                    checkIn: form.checkIn,
+                    checkOut: form.checkOut,
+                    careType: parseCareType(form.careType),
+                    tier: form.tier,
+                    nanniesNeeded: form.nanniesNeeded,
+                  }), parseCareType(form.careType))
+                  : 'Pick dates to see the estimate.'}
               </div>
               <div className="mfield" style={{ marginBottom: '1rem' }}>
                 <label>Special Requests / Notes</label>
