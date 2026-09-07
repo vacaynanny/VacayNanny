@@ -169,6 +169,22 @@ export type NannyDocument = {
   mime_type: string | null
 }
 
+export type WaitlistEntry = {
+  id: string
+  email: string
+  region: string | null
+  created_at: string
+}
+
+export type ContactMessage = {
+  id: string
+  name: string
+  email: string
+  subject: string | null
+  message: string
+  created_at: string
+}
+
 export type BookingPayload = {
   name?: string
   parentName?: string

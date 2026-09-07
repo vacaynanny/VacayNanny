@@ -499,6 +499,14 @@ drop policy if exists "contact_admin_read" on public.contact_messages;
 create policy "contact_admin_read" on public.contact_messages
   for select using (public.is_admin());
 
+drop policy if exists "waitlist_admin_delete" on public.waitlist;
+create policy "waitlist_admin_delete" on public.waitlist
+  for delete using (public.is_admin());
+
+drop policy if exists "contact_admin_delete" on public.contact_messages;
+create policy "contact_admin_delete" on public.contact_messages
+  for delete using (public.is_admin());
+
 -- ── Storage buckets ──────────────────────────────────────────────────────────
 
 insert into storage.buckets (id, name, public)
