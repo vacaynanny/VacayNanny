@@ -12,7 +12,8 @@ import {
   replacementDeadline,
   statusLabel,
 } from '@/lib/booking'
-import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny } from '@/lib/types'
+import AdminReviews from '@/components/AdminReviews'
+import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny, Review } from '@/lib/types'
 
 const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
 const BOOK_STATUSES: BookingStatus[] = ['pending', 'matched', 'confirmed', 'in_progress', 'completed', 'cancelled']
@@ -29,13 +30,15 @@ export default function AdminClient({
   applications,
   bookings,
   nannies,
+  reviews,
 }: {
   applications: NannyApplication[]
   bookings: Booking[]
   nannies: Nanny[]
+  reviews: Review[]
 }) {
   const router = useRouter()
-  const [tab, setTab] = useState<'applications' | 'bookings'>('applications')
+  const [tab, setTab] = useState<'applications' | 'bookings' | 'reviews'>('applications')
   const [busy, setBusy] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [force, setForce] = useState<Record<string, boolean>>({})
@@ -96,6 +99,9 @@ export default function AdminClient({
       <div className="dash-tabs">
         <button className={tab === 'applications' ? 'active' : ''} onClick={() => setTab('applications')}>Applications ({applications.length})</button>
         <button className={tab === 'bookings' ? 'active' : ''} onClick={() => setTab('bookings')}>Bookings ({bookings.length})</button>
+        <button className={tab === 'reviews' ? 'active' : ''} onClick={() => setTab('reviews')}>
+          Reviews ({reviews.filter(r => !r.is_published).length} pending)
+        </button>
       </div>
 
       {tab === 'applications' && (
@@ -210,6 +216,8 @@ export default function AdminClient({
           {bookings.length === 0 && <p style={{ color: 'rgba(255,255,255,0.5)' }}>No bookings yet.</p>}
         </div>
       )}
+
+      {tab === 'reviews' && <AdminReviews reviews={reviews} />}
     </div>
   )
 }

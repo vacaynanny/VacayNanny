@@ -231,14 +231,17 @@ create table if not exists public.reviews (
   rating        int not null check (rating between 1 and 5),
   body          text not null,
   avatar_url    text,
-  is_published  boolean not null default true,
+  is_published  boolean not null default false,
   created_at    timestamptz not null default now()
 );
 
 create index if not exists reviews_nanny_idx on public.reviews(nanny_id);
+create index if not exists reviews_published_idx on public.reviews(is_published);
 create unique index if not exists reviews_one_per_booking_idx
   on public.reviews (booking_id)
   where booking_id is not null;
+
+alter table public.reviews alter column is_published set default false;
 
 -- ── Waitlist & contact ───────────────────────────────────────────────────────
 
@@ -451,10 +454,18 @@ drop policy if exists "bookings_update_admin" on public.bookings;
 create policy "bookings_update_admin" on public.bookings
   for update using (public.is_admin()) with check (public.is_admin());
 
--- reviews: public published, admin write
+-- reviews: public published, family sees own, admin write
 drop policy if exists "reviews_public_read" on public.reviews;
 create policy "reviews_public_read" on public.reviews
-  for select using (is_published or public.is_admin());
+  for select using (
+    is_published
+    or public.is_admin()
+    or exists (
+      select 1 from public.bookings b
+      where b.id = booking_id
+        and b.parent_id = auth.uid()
+    )
+  );
 
 drop policy if exists "reviews_admin_write" on public.reviews;
 create policy "reviews_admin_write" on public.reviews

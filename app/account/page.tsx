@@ -23,10 +23,10 @@ export default async function AccountPage() {
     if (bookingIds.length) {
       const { data: reviewRows } = await supabase
         .from('reviews')
-        .select('id, booking_id, rating, body, trip_label, created_at')
+        .select('id, booking_id, rating, body, trip_label, is_published, created_at')
         .in('booking_id', bookingIds)
       const byBooking = new Map(
-        ((reviewRows || []) as Pick<Review, 'id' | 'booking_id' | 'rating' | 'body' | 'trip_label' | 'created_at'>[])
+        ((reviewRows || []) as Pick<Review, 'id' | 'booking_id' | 'rating' | 'body' | 'trip_label' | 'is_published' | 'created_at'>[])
           .filter(r => r.booking_id)
           .map(r => [r.booking_id as string, r]),
       )

@@ -195,6 +195,7 @@ export const FALLBACK_REVIEWS: Review[] = [
     body: 'We hired Grace for 5 days in Diani. She was incredible with our 2-year-old and 4-year-old. My husband and I finally had real couple time on a holiday for the first time in years. We\'ll never travel without VacayNanny again.',
     avatar_url: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&auto=format&fit=crop',
     created_at: '2024-12-20',
+    is_published: true,
   },
   {
     id: 'r2',
@@ -205,6 +206,7 @@ export const FALLBACK_REVIEWS: Review[] = [
     body: 'Faith joined us on safari in the Mara. She kept our kids engaged, did educational activities about wildlife, and managed mealtime like a pro. Worth every shilling. Absolute peace of mind.',
     avatar_url: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=80&auto=format&fit=crop',
     created_at: '2024-08-12',
+    is_published: true,
   },
   {
     id: 'r3',
@@ -215,6 +217,7 @@ export const FALLBACK_REVIEWS: Review[] = [
     body: 'As a solo mum travelling with 3 kids, I was nervous. Amara was a godsend — professional, warm, and my kids adored her. The booking process was seamless and customer support was always available.',
     avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&auto=format&fit=crop',
     created_at: '2025-04-04',
+    is_published: true,
   },
 ]
 

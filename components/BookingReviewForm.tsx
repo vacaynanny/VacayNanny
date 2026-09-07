@@ -73,7 +73,7 @@ export default function BookingReviewForm({
       </div>
       {error && <p className="field-error-msg">{error}</p>}
       <button className="btn-coral" type="submit" disabled={busy || rating < 1}>
-        {busy ? 'Saving…' : 'Publish review'}
+        {busy ? 'Saving…' : 'Submit review'}
       </button>
     </form>
   )

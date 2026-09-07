@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
         trip_label: [booking.destination, booking.check_in].filter(Boolean).join(' · '),
         rating,
         body: text,
-        is_published: true,
+        is_published: false,
       }])
-      .select('id, booking_id, nanny_id, parent_name, trip_label, rating, body, created_at')
+      .select('id, booking_id, nanny_id, parent_name, trip_label, rating, body, is_published, created_at')
       .single()
 
     if (error) {

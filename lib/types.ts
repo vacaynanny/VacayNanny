@@ -69,7 +69,9 @@ export type Review = {
   rating: number
   body: string
   avatar_url: string | null
+  is_published: boolean
   created_at: string
+  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug'> | null
 }
 
 export type Booking = {
@@ -102,7 +104,7 @@ export type Booking = {
   created_at: string
   updated_at?: string
   nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier' | 'daily_rate_kes'> | null
-  review?: Pick<Review, 'id' | 'rating' | 'body' | 'trip_label' | 'created_at'> | null
+  review?: Pick<Review, 'id' | 'rating' | 'body' | 'trip_label' | 'is_published' | 'created_at'> | null
 }
 
 export type NannyApplication = {

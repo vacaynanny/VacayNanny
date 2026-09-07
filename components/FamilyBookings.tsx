@@ -127,6 +127,11 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
                 <p className="review-form-title">Your review</p>
                 <div className="posted-review-stars">{'★'.repeat(b.review.rating)}{'☆'.repeat(5 - b.review.rating)}</div>
                 <p>{b.review.body}</p>
+                <p className={`review-mod-status${b.review.is_published ? ' live' : ''}`}>
+                  {b.review.is_published
+                    ? 'Live on the nanny profile'
+                    : 'Submitted — waiting for VacayNanny to publish'}
+                </p>
               </div>
             )}
             {canLeaveReview(b) && (
