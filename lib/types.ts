@@ -62,6 +62,7 @@ export type Nanny = {
 
 export type Review = {
   id: string
+  booking_id?: string | null
   nanny_id: string
   parent_name: string
   trip_label: string | null
@@ -101,6 +102,7 @@ export type Booking = {
   created_at: string
   updated_at?: string
   nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier' | 'daily_rate_kes'> | null
+  review?: Pick<Review, 'id' | 'rating' | 'body' | 'trip_label' | 'created_at'> | null
 }
 
 export type NannyApplication = {

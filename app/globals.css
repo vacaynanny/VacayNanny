@@ -629,6 +629,18 @@ textarea { resize:vertical;min-height:100px; }
 .booking-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
 .booking-actions .btn-coral, .booking-actions .btn-ghost { padding:8px 16px; font-size:0.82rem; }
 .reschedule-form { margin-top:14px; }
+.review-form { margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.07); }
+.review-form-title { font-size:0.88rem; font-weight:600; margin-bottom:8px; }
+.review-form .btn-coral { margin-top:12px; padding:8px 16px; font-size:0.82rem; }
+.star-picker { display:flex; gap:4px; margin:0 0 12px; }
+.star-picker button {
+  background:transparent; border:none; color:rgba(255,255,255,0.28);
+  font-size:1.45rem; line-height:1; cursor:pointer; padding:0 2px;
+}
+.star-picker button.on { color:var(--gold); }
+.posted-review { margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.07); }
+.posted-review-stars { color:var(--gold); letter-spacing:2px; margin-bottom:8px; }
+.posted-review p { color:rgba(255,255,255,0.7); line-height:1.6; font-size:0.9rem; }
 .modal-hint { font-size:0.75rem; color:rgba(255,255,255,0.42); margin-top:6px; line-height:1.4; }
 .quote-line { background:rgba(232,113,74,0.1); border:1px solid rgba(232,113,74,0.22); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem; color:#fff; }
 .force-assign { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:rgba(255,255,255,0.55); margin:4px 0 8px; }

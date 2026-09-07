@@ -215,6 +215,14 @@ export function statusLabel(status: BookingStatus): string {
   }
 }
 
+export function canLeaveReview(booking: {
+  status: BookingStatus
+  nanny_id?: string | null
+  review?: { id: string } | null
+}): boolean {
+  return booking.status === 'completed' && Boolean(booking.nanny_id) && !booking.review
+}
+
 export function nannyResponseLabel(response?: string | null): string {
   switch (response) {
     case 'accepted':

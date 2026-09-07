@@ -2,7 +2,7 @@ import { requireProfile } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase'
 import PageShell from '@/components/PageShell'
 import Link from 'next/link'
-import type { Booking } from '@/lib/types'
+import type { Booking, Review } from '@/lib/types'
 import SignOutButton from '@/components/SignOutButton'
 import FamilyBookings from '@/components/FamilyBookings'
 
@@ -19,6 +19,19 @@ export default async function AccountPage() {
       .or(`parent_id.eq.${profile.id},email.eq.${profile.email}`)
       .order('created_at', { ascending: false })
     bookings = (data || []) as Booking[]
+    const bookingIds = bookings.map(b => b.id)
+    if (bookingIds.length) {
+      const { data: reviewRows } = await supabase
+        .from('reviews')
+        .select('id, booking_id, rating, body, trip_label, created_at')
+        .in('booking_id', bookingIds)
+      const byBooking = new Map(
+        ((reviewRows || []) as Pick<Review, 'id' | 'booking_id' | 'rating' | 'body' | 'trip_label' | 'created_at'>[])
+          .filter(r => r.booking_id)
+          .map(r => [r.booking_id as string, r]),
+      )
+      bookings = bookings.map(b => ({ ...b, review: byBooking.get(b.id) ?? null }))
+    }
   } catch {}
 
   return (
@@ -26,7 +39,7 @@ export default async function AccountPage() {
       <section className="page-hero">
         <div className="eyebrow">Family account</div>
         <h1>Hello, <em>{profile.full_name || 'there'}</em></h1>
-        <p>Confirm matches, reschedule, or cancel. Status changes email you and the nanny.</p>
+        <p>Confirm matches, reschedule, cancel, or review a completed placement.</p>
       </section>
       <div className="sec-inner dash-page">
         <div className="dash-toolbar">

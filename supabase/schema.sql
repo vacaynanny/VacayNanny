@@ -236,6 +236,9 @@ create table if not exists public.reviews (
 );
 
 create index if not exists reviews_nanny_idx on public.reviews(nanny_id);
+create unique index if not exists reviews_one_per_booking_idx
+  on public.reviews (booking_id)
+  where booking_id is not null;
 
 -- ── Waitlist & contact ───────────────────────────────────────────────────────
 

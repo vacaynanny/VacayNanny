@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BookingReviewForm from '@/components/BookingReviewForm'
 import {
+  canLeaveReview,
   cancellationRefundPercent,
   careTypeLabel,
   parseCareType,
@@ -75,6 +77,7 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
                 <span className="review-val">{refundPolicyLabel(b.refund_percent ?? 0)}</span>
               </div>
             )}
+            {(canConfirm || canReschedule || canCancel) && (
             <div className="booking-actions">
               {canConfirm && (
                 <button className="btn-coral" disabled={busy === b.id} onClick={() => act(b.id, 'confirm')}>
@@ -97,6 +100,7 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
                 </button>
               )}
             </div>
+            )}
             {rescheduleId === b.id && (
               <form
                 className="reschedule-form"
@@ -117,6 +121,16 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
                 </div>
                 <button className="btn-coral" type="submit" disabled={busy === b.id}>Save dates</button>
               </form>
+            )}
+            {b.status === 'completed' && b.nanny_id && b.review && (
+              <div className="posted-review">
+                <p className="review-form-title">Your review</p>
+                <div className="posted-review-stars">{'★'.repeat(b.review.rating)}{'☆'.repeat(5 - b.review.rating)}</div>
+                <p>{b.review.body}</p>
+              </div>
+            )}
+            {canLeaveReview(b) && (
+              <BookingReviewForm bookingId={b.id} nannyName={nannyName} />
             )}
           </div>
         )
