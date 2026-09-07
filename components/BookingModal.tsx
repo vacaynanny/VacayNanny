@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DESTINATIONS } from '@/lib/constants'
+import { createSupabaseBrowser } from '@/lib/supabase/browser'
 
 export type BookingDefaults = {
   destination?: string
@@ -37,6 +38,32 @@ export default function BookingModal({
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [error, setError] = useState('')
+
+  // Prefill name/email/phone from the logged-in user's profile when the modal opens.
+  useEffect(() => {
+    if (!open) return
+    async function loadProfile() {
+      try {
+        const supabase = createSupabaseBrowser()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, email, phone')
+          .eq('id', user.id)
+          .maybeSingle()
+        setForm(f => ({
+          ...f,
+          name: f.name || String(profile?.full_name || user.user_metadata?.full_name || '').trim(),
+          email: f.email || String(profile?.email || user.email || '').trim(),
+          phone: f.phone || String(profile?.phone || '').trim(),
+        }))
+      } catch {
+        // Silent fail: leave fields empty so the user can type manually.
+      }
+    }
+    loadProfile()
+  }, [open])
 
   function change(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
