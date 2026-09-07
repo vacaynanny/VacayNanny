@@ -2,6 +2,13 @@ export const WHATSAPP_NUMBER = '254796930612'
 export const WHATSAPP_DISPLAY = '+254 796 930 612'
 export const SUPPORT_EMAIL = 'hello@vacaynanny.net'
 export const ADMIN_EMAIL = 'hello@vacaynanny.net'
+export const SITE_HOST = 'www.vacaynanny.net'
+export const SITE_URL = `https://${SITE_HOST}`
+
+export function siteUrl(path = '') {
+  const suffix = !path ? '' : path.startsWith('/') ? path : `/${path}`
+  return `${SITE_URL}${suffix}`
+}
 
 export const DESTINATIONS = [
   'Diani Beach',

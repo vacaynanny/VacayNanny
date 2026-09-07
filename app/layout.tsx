@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { DM_Sans, Playfair_Display } from 'next/font/google'
+import { SITE_URL } from '@/lib/constants'
 import './globals.css'
 
 const dmSans = DM_Sans({
@@ -18,6 +19,7 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'VacayNanny — Premium Holiday Childcare',
   description: 'Professional, vetted nannies for your family vacations in Kenya and beyond.',
 }

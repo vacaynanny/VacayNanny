@@ -8,3 +8,15 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "https://vacaynanny.net/*"
+  to = "https://www.vacaynanny.net/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "http://vacaynanny.net/*"
+  to = "https://www.vacaynanny.net/:splat"
+  status = 301
+  force = true

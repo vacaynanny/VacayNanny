@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
+import { SITE_URL } from '@/lib/constants'
 import Nav from '@/components/Nav'
 
 function ForgotPasswordForm() {
@@ -25,7 +26,7 @@ function ForgotPasswordForm() {
     setError('')
     const supabase = createSupabaseBrowser()
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      redirectTo: `${SITE_URL}/auth/callback?next=/reset-password`,
     })
     setLoading(false)
     if (err) { setError(err.message); return }

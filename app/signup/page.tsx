@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
+import { SITE_URL } from '@/lib/constants'
 import Nav from '@/components/Nav'
 
 export default function SignupPage() {
@@ -31,7 +32,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: fullName, role },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${SITE_URL}/auth/callback`,
       },
     })
     setLoading(false)

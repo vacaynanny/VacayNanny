@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { SITE_URL, siteUrl } from '@/lib/constants'
 
 const ADMIN_EMAIL = 'hello@vacaynanny.net'
 const FROM_ADDRESS = 'VacayNanny <noreply@vacaynanny.net>'
@@ -263,8 +264,8 @@ export async function sendApplicationEmails(data: {
       row('Reference 2', data.ref2Name)
     )}
 
-    <a href="https://supabase.com" style="display:inline-block;background:#E8714A;color:#fff;border-radius:50px;padding:12px 28px;font-size:14px;font-weight:600;text-decoration:none;margin-top:8px;">
-      View in Supabase →
+    <a href="${SITE_URL}/admin" style="display:inline-block;background:#E8714A;color:#fff;border-radius:50px;padding:12px 28px;font-size:14px;font-weight:600;text-decoration:none;margin-top:8px;">
+      View in admin →
     </a>
   `)
 
@@ -320,10 +321,6 @@ export type BookingMailContext = {
   note?: string | null
 }
 
-function siteUrl() {
-  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://vacaynanny.net').replace(/\/$/, '')
-}
-
 function bookingDetails(ctx: BookingMailContext): string {
   return section('Booking',
     row('Destination', ctx.destination) +
@@ -346,9 +343,9 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
   extraSubject?: string
   extraBody?: string
 } {
-  const familyLink = `${siteUrl()}/account`
-  const nannyLink = `${siteUrl()}/nanny`
-  const adminLink = `${siteUrl()}/admin`
+  const familyLink = siteUrl('/account')
+  const nannyLink = siteUrl('/nanny')
+  const adminLink = siteUrl('/admin')
   const details = bookingDetails(ctx)
 
   switch (event) {
