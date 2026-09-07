@@ -12,6 +12,7 @@ import {
   replacementDeadline,
   statusLabel,
 } from '@/lib/booking'
+import { nannyAssignmentWaHref } from '@/lib/constants'
 import AdminReviews from '@/components/AdminReviews'
 import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny, Review } from '@/lib/types'
 
@@ -140,6 +141,18 @@ export default function AdminClient({
             const openReplacement = isReplacementOpen(b)
             const overdue = isReplacementOverdue(b)
             const nannyClash = clashesByBooking[b.id] || {}
+            const assigned = nannies.find(n => n.id === b.nanny_id)
+            const assignedApp = assigned
+              ? applications.find(a => a.id === assigned.application_id || (assigned.user_id && a.user_id === assigned.user_id))
+              : undefined
+            const nannyWa = assigned
+              ? nannyAssignmentWaHref(assignedApp?.phone, assignedApp?.country_code, {
+                nannyName: assigned.display_name,
+                destination: b.destination,
+                checkIn: b.check_in,
+                checkOut: b.check_out,
+              })
+              : null
             return (
               <div className="form-card" key={b.id}>
                 <div className="review-row">
@@ -186,6 +199,11 @@ export default function AdminClient({
                   Force assign (skip clash check)
                 </label>
                 <div className="booking-actions" style={{ marginTop: 12 }}>
+                  {nannyWa && b.status !== 'cancelled' && b.status !== 'completed' && (
+                    <a className="btn-coral" href={nannyWa} target="_blank" rel="noopener noreferrer">
+                      WhatsApp nanny
+                    </a>
+                  )}
                   {b.nanny_id && !openReplacement && b.status !== 'cancelled' && b.status !== 'completed' && (
                     <button className="btn-ghost" disabled={busy === b.id} onClick={() => patch(b.id, { action: 'replace' })}>
                       Replace nanny

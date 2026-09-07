@@ -63,6 +63,40 @@ export function waLink(text = "Hi VacayNanny! I'd like to book a nanny.") {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`
 }
 
+/** Normalize a phone into digits for wa.me (Kenya 0… → 254…). */
+export function waDigits(phone?: string | null, countryCode?: string | null) {
+  const local = (phone || '').replace(/\D/g, '')
+  if (!local) return ''
+  const cc = (countryCode || '').replace(/\D/g, '')
+  if (local.startsWith('0') && cc) return `${cc}${local.slice(1)}`
+  if (local.startsWith('0')) return `254${local.slice(1)}`
+  if (cc && !local.startsWith(cc) && local.length <= 9) return `${cc}${local}`
+  return local
+}
+
+export function waLinkTo(phone: string, text: string, countryCode?: string | null) {
+  const digits = waDigits(phone, countryCode)
+  if (!digits) return ''
+  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`
+}
+
+export function nannyAssignmentMessage(opts: {
+  nannyName: string
+  destination: string
+  checkIn: string
+  checkOut: string
+}) {
+  return `Hi ${opts.nannyName}, VacayNanny has a placement for you in ${opts.destination} (${opts.checkIn} → ${opts.checkOut}). Please accept or decline here: ${siteUrl('/nanny')}`
+}
+
+export function nannyAssignmentWaHref(
+  phone: string | null | undefined,
+  countryCode: string | null | undefined,
+  opts: { nannyName: string; destination: string; checkIn: string; checkOut: string },
+) {
+  return waLinkTo(phone || '', nannyAssignmentMessage(opts), countryCode) || null
+}
+
 export function formatKes(amount: number) {
   return `KES ${amount.toLocaleString('en-KE')}`
 }

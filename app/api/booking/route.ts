@@ -3,7 +3,7 @@ import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { notifyBookingEvent, sendBookingEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
 import { careTypeLabel, parseCareType, quoteBooking } from '@/lib/booking'
-import { findNannyClashes, jsonFromBookingError } from '@/lib/booking-ops'
+import { findNannyClashes, jsonFromBookingError, nannyContact } from '@/lib/booking-ops'
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
     let dailyRateKes: number | null = null
     let nannyName: string | null = null
     let nannyEmail: string | null = null
+    let nannyPhone: string | null = null
     if (nannyId) {
-      const { data } = await supabase.from('nannies').select('daily_rate_kes, display_name, user_id').eq('id', nannyId).maybeSingle()
+      const { data } = await supabase.from('nannies').select('daily_rate_kes').eq('id', nannyId).maybeSingle()
       dailyRateKes = data?.daily_rate_kes ?? null
-      nannyName = data?.display_name ?? null
-      if (data?.user_id) {
-        const { data: profile } = await supabase.from('profiles').select('email').eq('id', data.user_id).maybeSingle()
-        nannyEmail = profile?.email ?? null
-      }
+      const contact = await nannyContact(supabase, nannyId)
+      nannyName = contact.name
+      nannyEmail = contact.email
+      nannyPhone = contact.phone
       const clashes = await findNannyClashes(supabase, nannyId, checkIn, checkOut)
       if (clashes.length) {
         return NextResponse.json({
@@ -100,24 +100,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    sendBookingEmails({
-      parentName,
-      email,
-      phone,
-      destination,
-      checkIn,
-      checkOut,
-      childrenAges: [childrenCount, youngestAge].filter(Boolean).join(' · '),
-      tier: tier || 'Any',
-      message: notes,
-    }).catch(err => console.error('sendBookingEmails failed:', err))
-
     if (assigned) {
       notifyBookingEvent('matched', {
         parentName,
         parentEmail: email,
         nannyName,
         nannyEmail,
+        nannyPhone,
         destination,
         checkIn,
         checkOut,
@@ -126,6 +115,18 @@ export async function POST(request: NextRequest) {
         totalKes: total,
         note: 'Family requested this nanny',
       }).catch(err => console.error('notifyBookingEvent matched failed:', err))
+    } else {
+      sendBookingEmails({
+        parentName,
+        email,
+        phone,
+        destination,
+        checkIn,
+        checkOut,
+        childrenAges: [childrenCount, youngestAge].filter(Boolean).join(' · '),
+        tier: tier || 'Any',
+        message: notes,
+      }).catch(err => console.error('sendBookingEmails failed:', err))
     }
 
     return NextResponse.json({ success: true, total, careType }, { status: 200 })

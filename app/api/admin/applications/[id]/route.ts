@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createSupabaseServer } from '@/lib/supabase/server'
 import { slugify, TIER_RATES } from '@/lib/constants'
+import { sendApplicationStatusEmail } from '@/lib/email'
 import type { ApplicationStatus, NannyTier } from '@/lib/types'
 
 async function requireAdmin() {
@@ -33,6 +34,7 @@ export async function PATCH(
     .single()
   if (fetchErr || !app) return NextResponse.json({ error: 'Application not found' }, { status: 404 })
 
+  const previousStatus = app.status as ApplicationStatus
   const updates: Record<string, unknown> = {}
   if (status) updates.status = status
   if (adminNotes !== undefined) updates.admin_notes = adminNotes
@@ -90,6 +92,21 @@ export async function PATCH(
         await supabase.from('profiles').update({ role: 'nanny' }).eq('id', app.user_id)
       }
     }
+  }
+
+  if (status && status !== previousStatus && (status === 'approved' || status === 'rejected')) {
+    let slug: string | null = null
+    if (status === 'approved') {
+      const { data: live } = await supabase.from('nannies').select('slug').eq('application_id', id).maybeSingle()
+      slug = live?.slug ?? null
+    }
+    sendApplicationStatusEmail({
+      fullName: app.full_name,
+      email: app.email,
+      status,
+      slug,
+      notes: typeof adminNotes === 'string' ? adminNotes : app.admin_notes,
+    }).catch(err => console.error('sendApplicationStatusEmail failed:', err))
   }
 
   return NextResponse.json({ success: true })

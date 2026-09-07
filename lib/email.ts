@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { SITE_URL, siteUrl } from '@/lib/constants'
+import { SITE_URL, siteUrl, waLink, nannyAssignmentWaHref } from '@/lib/constants'
 
 const ADMIN_EMAIL = 'hello@vacaynanny.net'
 const FROM_ADDRESS = 'VacayNanny <noreply@vacaynanny.net>'
@@ -288,6 +288,41 @@ export async function sendApplicationEmails(data: {
   if (adminResult.error) console.error('Admin application email error:', adminResult.error)
 }
 
+export async function sendApplicationStatusEmail(data: {
+  fullName: string
+  email: string
+  status: 'approved' | 'rejected'
+  slug?: string | null
+  notes?: string | null
+}) {
+  const dashboard = siteUrl('/nanny')
+  const profile = data.slug ? siteUrl(`/nannies/${data.slug}`) : dashboard
+  const approved = data.status === 'approved'
+  const html = htmlWrapper(approved
+    ? `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:700;color:#fff;">You're in ✓</h2>
+      <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.6);line-height:1.6;">
+        Hi ${data.fullName}, your VacayNanny application is <strong style="color:#fff;">approved</strong>. Your profile is live and you can start receiving placements.
+      </p>
+      <p style="margin:0 0 16px;"><a href="${profile}" style="color:#E8714A;">View your public profile →</a></p>
+      <p style="margin:0;"><a href="${dashboard}" style="color:#E8714A;">Open nanny dashboard →</a></p>`
+    : `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:700;color:#fff;">Application update</h2>
+      <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.6);line-height:1.6;">
+        Hi ${data.fullName}, we're not able to approve your VacayNanny application at this time.
+      </p>
+      ${data.notes ? `<p style="margin:0 0 16px;font-size:14px;color:rgba(255,255,255,0.65);line-height:1.6;">${data.notes}</p>` : ''}
+      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.45);">Questions? WhatsApp us at <a href="${waLink('Hi VacayNanny, I have a question about my application.')}" style="color:#E8714A;text-decoration:none;">+254 796 930 612</a></p>`)
+
+  const result = await sendOrSkip({
+    from: FROM_ADDRESS,
+    to: data.email,
+    subject: approved
+      ? 'Your VacayNanny profile is live'
+      : 'Update on your VacayNanny application',
+    html,
+  })
+  if (result.error) console.error('Application status email error:', result.error)
+}
+
 // ── Booking lifecycle emails ────────────────────────────────────────────────
 
 export type BookingEmailEvent =
@@ -309,6 +344,7 @@ export type BookingMailContext = {
   parentEmail: string
   nannyName?: string | null
   nannyEmail?: string | null
+  nannyPhone?: string | null
   extraNannyName?: string | null
   extraNannyEmail?: string | null
   destination: string
@@ -333,6 +369,24 @@ function bookingDetails(ctx: BookingMailContext): string {
   )
 }
 
+function nannyActionCta(nannyLink: string): string {
+  return `<p style="margin:16px 0;"><a href="${nannyLink}" style="display:inline-block;background:#E8714A;color:#fff;border-radius:50px;padding:12px 24px;font-size:14px;font-weight:600;text-decoration:none;">Accept or decline →</a></p>
+    <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.45);">Prefer WhatsApp? Message us at <a href="${waLink('Hi VacayNanny, I got a placement assignment.')}" style="color:#E8714A;text-decoration:none;">+254 796 930 612</a></p>`
+}
+
+function adminNannyWhatsAppCta(ctx: BookingMailContext): string {
+  const href = nannyAssignmentWaHref(ctx.nannyPhone, null, {
+    nannyName: ctx.nannyName || 'there',
+    destination: ctx.destination,
+    checkIn: ctx.checkIn,
+    checkOut: ctx.checkOut,
+  })
+  if (!href) {
+    return `<p style="margin:0 0 16px;font-size:13px;color:rgba(255,255,255,0.45);">No nanny phone on file — email only. ${ctx.nannyEmail ? `Emailed ${ctx.nannyEmail}.` : 'No nanny email either.'}</p>`
+  }
+  return `<p style="margin:0 0 16px;"><a href="${href}" style="display:inline-block;background:#25D366;color:#fff;border-radius:50px;padding:12px 24px;font-size:14px;font-weight:600;text-decoration:none;">WhatsApp ${ctx.nannyName || 'nanny'} →</a></p>`
+}
+
 function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
   parentSubject: string
   parentBody: string
@@ -351,18 +405,20 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
   switch (event) {
     case 'matched':
       return {
-        parentSubject: `We've proposed a nanny for ${ctx.destination}`,
-        parentBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Nanny proposed</h2>
-          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">Hi ${ctx.parentName}, ${ctx.nannyName || 'A VacayNanny'} is proposed for your trip. Open your account to confirm the match.</p>
+        parentSubject: `We've received your request — ${ctx.nannyName || 'a nanny'} proposed for ${ctx.destination}`,
+        parentBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Request received</h2>
+          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">Hi ${ctx.parentName}, we've received your booking request and proposed ${ctx.nannyName || 'a VacayNanny'} for your trip. Open your account to confirm the match.</p>
           ${details}
           <p><a href="${familyLink}" style="color:#E8714A;">Confirm in your account →</a></p>`,
         nannySubject: `New placement proposed — ${ctx.destination}`,
         nannyBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">You've been assigned</h2>
           <p style="color:rgba(255,255,255,0.65);line-height:1.6;">Hi ${ctx.nannyName || 'there'}, please accept or decline this placement in your dashboard.</p>
           ${details}
-          <p><a href="${nannyLink}" style="color:#E8714A;">Open nanny dashboard →</a></p>`,
-        adminSubject: `[Matched] ${ctx.parentName} → ${ctx.nannyName || 'nanny'} (${ctx.destination})`,
-        adminBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:22px;color:#fff;">Nanny assigned</h2>${details}<p><a href="${adminLink}" style="color:#E8714A;">Open admin →</a></p>`,
+          ${nannyActionCta(nannyLink)}`,
+        adminSubject: `[Ping nanny] ${ctx.nannyName || 'nanny'} → ${ctx.destination}`,
+        adminBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:22px;color:#fff;">WhatsApp the nanny</h2>
+          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">Assignment email went to ${ctx.nannyEmail || 'no email on file'}. Tap below to ping them on WhatsApp.</p>
+          ${adminNannyWhatsAppCta(ctx)}${details}<p><a href="${adminLink}" style="color:#E8714A;">Open admin →</a></p>`,
       }
     case 'nanny_accepted':
       return {
@@ -399,7 +455,7 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
         nannySubject: `Family confirmed — please accept ${ctx.destination}`,
         nannyBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Family confirmed</h2>
           <p style="color:rgba(255,255,255,0.65);line-height:1.6;">${ctx.parentName} confirmed this match. Accept in your dashboard to lock it in.</p>
-          ${details}<p><a href="${nannyLink}" style="color:#E8714A;">Accept placement →</a></p>`,
+          ${details}${nannyActionCta(nannyLink)}`,
         adminSubject: `[Family confirmed] ${ctx.parentName} / ${ctx.destination}`,
         adminBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:22px;color:#fff;">Family confirmed</h2>${details}`,
       }
@@ -462,9 +518,10 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
         nannySubject: `Replacement placement — ${ctx.destination}`,
         nannyBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Replacement assignment</h2>
           <p style="color:rgba(255,255,255,0.65);line-height:1.6;">Please accept or decline this coverage placement.</p>
-          ${details}<p><a href="${nannyLink}" style="color:#E8714A;">Respond now →</a></p>`,
-        adminSubject: `[Replacement assigned] ${ctx.nannyName || 'nanny'} → ${ctx.parentName}`,
-        adminBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:22px;color:#fff;">Replacement assigned</h2>${details}`,
+          ${details}${nannyActionCta(nannyLink)}`,
+        adminSubject: `[Ping replacement] ${ctx.nannyName || 'nanny'} → ${ctx.parentName}`,
+        adminBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:22px;color:#fff;">Replacement assigned — WhatsApp them</h2>
+          ${adminNannyWhatsAppCta(ctx)}${details}<p><a href="${adminLink}" style="color:#E8714A;">Open admin →</a></p>`,
       }
     case 'replacement_refunded':
       return {
@@ -505,6 +562,21 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
   }
 }
 
+const ADMIN_NOTIFY_EVENTS: ReadonlySet<BookingEmailEvent> = new Set([
+  'matched',
+  'nanny_declined',
+  'replacement_started',
+  'replacement_assigned',
+  'replacement_refunded',
+  'cancelled',
+])
+
+const NANNY_ACTION_EVENTS: ReadonlySet<BookingEmailEvent> = new Set([
+  'matched',
+  'replacement_assigned',
+  'parent_confirmed',
+])
+
 export async function notifyBookingEvent(event: BookingEmailEvent, ctx: BookingMailContext) {
   const copy = eventCopy(event, ctx)
   const wrapped = (html: string) => htmlWrapper(html)
@@ -515,13 +587,15 @@ export async function notifyBookingEvent(event: BookingEmailEvent, ctx: BookingM
       subject: copy.parentSubject,
       html: wrapped(copy.parentBody),
     }),
-    sendOrSkip({
+  ]
+  if (ADMIN_NOTIFY_EVENTS.has(event)) {
+    sends.push(sendOrSkip({
       from: FROM_ADDRESS,
       to: ADMIN_EMAIL,
       subject: copy.adminSubject,
       html: wrapped(copy.adminBody),
-    }),
-  ]
+    }))
+  }
   if (ctx.nannyEmail) {
     sends.push(sendOrSkip({
       from: FROM_ADDRESS,
@@ -529,6 +603,8 @@ export async function notifyBookingEvent(event: BookingEmailEvent, ctx: BookingM
       subject: copy.nannySubject,
       html: wrapped(copy.nannyBody),
     }))
+  } else if (NANNY_ACTION_EVENTS.has(event)) {
+    console.warn(`No nanny email for ${event} — ${ctx.nannyName || 'unassigned'} / ${ctx.destination}`)
   }
   if (ctx.extraNannyEmail && ctx.extraNannyEmail !== ctx.nannyEmail && copy.extraSubject && copy.extraBody) {
     sends.push(sendOrSkip({

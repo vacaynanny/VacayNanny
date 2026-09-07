@@ -10,6 +10,7 @@ import {
   careTypeLabel,
 } from '@/lib/booking'
 import { notifyBookingEvent, type BookingEmailEvent } from '@/lib/email'
+import { waDigits } from '@/lib/constants'
 import type { Booking, BookingStatus, CareType, Nanny } from '@/lib/types'
 
 export type BookingClash = {
@@ -101,24 +102,49 @@ export async function findNannyClashes(
     }))
 }
 
-async function nannyContact(supabase: SupabaseClient, nannyId: string | null) {
-  if (!nannyId) return { name: null as string | null, email: null as string | null }
+export type NannyContact = {
+  name: string | null
+  email: string | null
+  phone: string | null
+}
+
+export async function nannyContact(supabase: SupabaseClient, nannyId: string | null): Promise<NannyContact> {
+  if (!nannyId) return { name: null, email: null, phone: null }
   const { data: nanny } = await supabase
     .from('nannies')
-    .select('display_name, user_id')
+    .select('display_name, user_id, application_id')
     .eq('id', nannyId)
     .maybeSingle()
-  if (!nanny) return { name: null, email: null }
+  if (!nanny) return { name: null, email: null, phone: null }
+
   let email: string | null = null
+  let phone: string | null = null
+
   if (nanny.user_id) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('email')
+      .select('email, phone')
       .eq('id', nanny.user_id)
       .maybeSingle()
     email = profile?.email ?? null
+    phone = profile?.phone ?? null
   }
-  return { name: nanny.display_name as string, email }
+
+  if ((!email || !phone) && nanny.application_id) {
+    const { data: application } = await supabase
+      .from('nanny_applications')
+      .select('email, phone, country_code')
+      .eq('id', nanny.application_id)
+      .maybeSingle()
+    if (application) {
+      email = email || application.email || null
+      if (!phone && application.phone) {
+        phone = waDigits(application.phone, application.country_code) || application.phone
+      }
+    }
+  }
+
+  return { name: nanny.display_name as string, email, phone }
 }
 
 async function quoteFor(supabase: SupabaseClient, booking: Booking, checkIn: string, checkOut: string, careType: CareType) {
@@ -146,13 +172,14 @@ async function fireEvent(
   const nannyId = extra?.nannyId === undefined ? booking.nanny_id : extra.nannyId
   const [assigned, extraNanny] = await Promise.all([
     nannyContact(supabase, nannyId ?? null),
-    extra?.extraNannyId ? nannyContact(supabase, extra.extraNannyId) : Promise.resolve({ name: null, email: null }),
+    extra?.extraNannyId ? nannyContact(supabase, extra.extraNannyId) : Promise.resolve({ name: null, email: null, phone: null }),
   ])
   await notifyBookingEvent(event, {
     parentName: booking.parent_name,
     parentEmail: booking.email,
     nannyName: assigned.name,
     nannyEmail: assigned.email,
+    nannyPhone: assigned.phone,
     extraNannyName: extraNanny.name,
     extraNannyEmail: extraNanny.email,
     destination: booking.destination,
