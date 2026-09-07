@@ -576,6 +576,8 @@ textarea { resize:vertical;min-height:100px; }
 .auth-card .field-error-msg { margin-top:-4px; }
 .auth-switch { font-size:0.88rem; color:rgba(255,255,255,0.5); text-align:center; margin-top:4px; }
 .auth-switch a { color:var(--coral); text-decoration:underline; text-underline-offset:3px; }
+.auth-forgot { margin-top:-8px; text-align:right; font-size:0.84rem; }
+.auth-forgot a { color:var(--coral); text-decoration:underline; text-underline-offset:3px; }
 .profile-layout { display:grid; grid-template-columns:1.6fr 0.9fr; gap:24px; padding-bottom:80px; align-items:start; }
 .dash-page { padding-bottom:80px; }
 .dash-toolbar { display:flex; gap:12px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }

@@ -74,6 +74,7 @@ function LoginForm() {
               placeholder="Your password"
             />
           </div>
+          <p className="auth-forgot"><Link href="/forgot-password">Forgot password?</Link></p>
           {error && <p className="field-error-msg">{error}</p>}
           <button className="btn-submit" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
           <p className="auth-switch">New here? <Link href="/signup">Create an account</Link></p>

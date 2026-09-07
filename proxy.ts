@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
   if (!url || !key) return NextResponse.next()
 
   const path = request.nextUrl.pathname
-  const isAuthPage = path === '/login' || path === '/signup'
+  const isAuthPage = path === '/login' || path === '/signup' || path === '/forgot-password'
   const gate = Object.entries(PROTECTED).find(
     ([prefix]) => path === prefix || path.startsWith(prefix + '/'),
   )
@@ -97,5 +97,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/account/:path*', '/nanny/:path*', '/admin/:path*', '/login', '/signup'],
+  matcher: ['/account/:path*', '/nanny/:path*', '/admin/:path*', '/login', '/signup', '/forgot-password'],
 }
