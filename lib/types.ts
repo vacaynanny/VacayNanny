@@ -206,4 +206,5 @@ export type BookingPayload = {
   message?: string
   nannyId?: string
   careType?: CareType
+  infantCare?: boolean
 }

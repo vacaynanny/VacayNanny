@@ -20,6 +20,10 @@ export async function PATCH(
     const supabase = createServerClient()
 
     const action = String(body.action || '')
+    if (action === 'auto_match') {
+      const result = await applyBookingMutation(supabase, id, { action: 'auto_match' })
+      return NextResponse.json({ success: true, booking: result.booking, event: result.event })
+    }
     if (action === 'replace') {
       const result = await applyBookingMutation(supabase, id, { action: 'replace', reason: body.reason })
       return NextResponse.json({ success: true, booking: result.booking, event: result.event })

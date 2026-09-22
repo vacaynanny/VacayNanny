@@ -11,6 +11,7 @@ import {
 } from '@/lib/booking'
 import { notifyBookingEvent, type BookingEmailEvent } from '@/lib/email'
 import { waDigits } from '@/lib/constants'
+import { bestAvailableMatch, matchRequestFromBooking, type ClashRow } from '@/lib/match'
 import type { Booking, BookingStatus, CareType, Nanny } from '@/lib/types'
 
 export type BookingClash = {
@@ -60,6 +61,7 @@ export type BookingMutation =
   | { action: 'set_status'; status: BookingStatus }
   | { action: 'replace'; reason?: string }
   | { action: 'refund_replacement' }
+  | { action: 'auto_match' }
 
 const NANNY_EMBED = 'nannies(id, display_name, slug, photo_url, tier, daily_rate_kes)'
 
@@ -75,6 +77,25 @@ function normalizeBooking(row: Record<string, unknown>): Booking {
     care_type: parseCareType(row.care_type),
     nannies: (row.nannies as Booking['nannies']) ?? null,
   }
+}
+
+export async function suggestMatch(supabase: SupabaseClient, request: Parameters<typeof bestAvailableMatch>[1]) {
+  const [{ data: nannies, error: nannyErr }, { data: rows, error: bookErr }] = await Promise.all([
+    supabase.from('nannies').select('*').eq('is_active', true),
+    supabase.from('bookings').select('id, nanny_id, check_in, check_out, status, nanny_response, parent_name'),
+  ])
+  if (nannyErr) throw new BookingActionError(nannyErr.message, 500)
+  if (bookErr) throw new BookingActionError(bookErr.message, 500)
+  return bestAvailableMatch((nannies || []) as Nanny[], request, (rows || []) as ClashRow[])
+}
+
+async function pickAutoMatch(supabase: SupabaseClient, bookingId: string): Promise<string> {
+  const booking = await loadBooking(supabase, bookingId)
+  const best = await suggestMatch(supabase, matchRequestFromBooking(booking))
+  if (!best) {
+    throw new BookingActionError('No available nanny matches destination, dates, infant care, and skills.', 409)
+  }
+  return best.nanny.id
 }
 
 export async function findNannyClashes(
@@ -198,16 +219,19 @@ export async function applyBookingMutation(
   bookingId: string,
   mutation: BookingMutation,
 ): Promise<{ booking: Booking; event: BookingEmailEvent }> {
+  const resolved: Exclude<BookingMutation, { action: 'auto_match' }> = mutation.action === 'auto_match'
+    ? { action: 'assign', nannyId: await pickAutoMatch(supabase, bookingId) }
+    : mutation
   const booking = await loadBooking(supabase, bookingId)
   const updates: Record<string, unknown> = {}
   let event: BookingEmailEvent
   let notifyNannyId: string | null | undefined = undefined
   let extraNannyId: string | null | undefined = undefined
-  let note: string | null | undefined = mutation.action === 'cancel' || mutation.action === 'decline' || mutation.action === 'replace'
-    ? ('reason' in mutation ? mutation.reason : undefined)
+  let note: string | null | undefined = resolved.action === 'cancel' || resolved.action === 'decline' || resolved.action === 'replace'
+    ? ('reason' in resolved ? resolved.reason : undefined)
     : undefined
 
-  switch (mutation.action) {
+  switch (resolved.action) {
     case 'confirm': {
       if (booking.status === 'cancelled' || booking.status === 'completed') {
         throw new BookingActionError('This booking can no longer be confirmed.')
@@ -237,7 +261,9 @@ export async function applyBookingMutation(
       const refund = cancellationRefundPercent(booking.check_in)
       updates.status = 'cancelled'
       updates.cancelled_at = new Date().toISOString()
-      updates.cancellation_reason = mutation.reason?.trim() || 'Cancelled by family'
+      updates.cancellation_reason = resolved.action === 'cancel'
+        ? (resolved.reason?.trim() || 'Cancelled by family')
+        : 'Cancelled by family'
       updates.refund_percent = refund
       event = 'cancelled'
       note = updates.cancellation_reason as string
@@ -247,25 +273,26 @@ export async function applyBookingMutation(
       if (!['pending', 'matched', 'confirmed'].includes(booking.status)) {
         throw new BookingActionError('This booking cannot be rescheduled.')
       }
-      if (new Date(mutation.checkOut) < new Date(mutation.checkIn)) {
+      if (resolved.action !== 'reschedule') throw new BookingActionError('Invalid reschedule payload.')
+      if (new Date(resolved.checkOut) < new Date(resolved.checkIn)) {
         throw new BookingActionError('Check-out must be on or after check-in.')
       }
       if (booking.nanny_id) {
         const clashes = await findNannyClashes(
           supabase,
           booking.nanny_id,
-          mutation.checkIn,
-          mutation.checkOut,
+          resolved.checkIn,
+          resolved.checkOut,
           booking.id,
         )
         if (clashes.length) throw new BookingConflictError(clashes)
       }
-      const quote = await quoteFor(supabase, booking, mutation.checkIn, mutation.checkOut, booking.care_type)
-      updates.check_in = mutation.checkIn
-      updates.check_out = mutation.checkOut
+      const quote = await quoteFor(supabase, booking, resolved.checkIn, resolved.checkOut, booking.care_type)
+      updates.check_in = resolved.checkIn
+      updates.check_out = resolved.checkOut
       updates.total_amount_kes = quote.total
       event = 'rescheduled'
-      note = `New dates: ${mutation.checkIn} → ${mutation.checkOut}`
+      note = `New dates: ${resolved.checkIn} → ${resolved.checkOut}`
       break
     }
     case 'accept': {
@@ -300,7 +327,7 @@ export async function applyBookingMutation(
         updates.nanny_response = null
         event = 'replacement_started'
         notifyNannyId = null
-        note = mutation.reason?.trim() || 'Nanny declined a confirmed placement'
+        note = (resolved.action === 'decline' ? resolved.reason?.trim() : undefined) || 'Nanny declined a confirmed placement'
       } else {
         updates.nanny_id = null
         updates.status = 'pending'
@@ -308,14 +335,14 @@ export async function applyBookingMutation(
         updates.parent_confirmed_at = null
         event = 'nanny_declined'
         notifyNannyId = null
-        note = mutation.reason?.trim() || 'Nanny declined the assignment'
+        note = (resolved.action === 'decline' ? resolved.reason?.trim() : undefined) || 'Nanny declined the assignment'
       }
       break
     }
     case 'assign': {
-      const nannyId = mutation.nannyId || null
+      const nannyId = resolved.nannyId || null
       if (nannyId) {
-        if (!mutation.force) {
+        if (!resolved.force) {
           const clashes = await findNannyClashes(supabase, nannyId, booking.check_in, booking.check_out, booking.id)
           if (clashes.length) throw new BookingConflictError(clashes)
         }
@@ -346,8 +373,8 @@ export async function applyBookingMutation(
       break
     }
     case 'set_status': {
-      updates.status = mutation.status
-      switch (mutation.status) {
+      updates.status = resolved.status
+      switch (resolved.status) {
         case 'cancelled': {
           updates.cancelled_at = booking.cancelled_at || new Date().toISOString()
           updates.refund_percent = booking.refund_percent ?? cancellationRefundPercent(booking.check_in)
@@ -375,7 +402,7 @@ export async function applyBookingMutation(
           note = 'Returned to pending by ops'
           break
         default: {
-          const _never: never = mutation.status
+          const _never: never = resolved.status
           throw new BookingActionError(`Unhandled status: ${_never}`)
         }
       }
@@ -396,7 +423,7 @@ export async function applyBookingMutation(
       updates.status = 'matched'
       event = 'replacement_started'
       notifyNannyId = null
-      note = mutation.reason?.trim() || 'Replacement requested (no-show / cannot attend)'
+      note = (resolved.action === 'replace' ? resolved.reason?.trim() : undefined) || 'Replacement requested (no-show / cannot attend)'
       break
     }
     case 'refund_replacement': {
@@ -414,7 +441,7 @@ export async function applyBookingMutation(
       break
     }
     default: {
-      const _never: never = mutation
+      const _never: never = resolved
       throw new BookingActionError(`Unhandled action: ${JSON.stringify(_never)}`)
     }
   }

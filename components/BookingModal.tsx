@@ -15,6 +15,7 @@ export type BookingDefaults = {
   tier?: string
   nannyId?: string
   nannyName?: string
+  infantCare?: boolean
 }
 
 export default function BookingModal({
@@ -41,10 +42,24 @@ export default function BookingModal({
     nanniesNeeded: '1',
     tier: defaults?.tier || '',
     careType: 'standard' as CareType,
+    infantCare: Boolean(defaults?.infantCare),
     notes: '',
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setForm(f => ({
+      ...f,
+      destination: defaults?.destination || f.destination,
+      checkIn: defaults?.checkIn || f.checkIn,
+      checkOut: defaults?.checkOut || f.checkOut,
+      tier: defaults?.tier || f.tier,
+      infantCare: Boolean(defaults?.infantCare) || f.infantCare,
+      youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
+    }))
+  }, [open, defaults?.destination, defaults?.checkIn, defaults?.checkOut, defaults?.tier, defaults?.infantCare])
 
   // Prefill name/email/phone from the logged-in user's profile when the modal opens.
   useEffect(() => {
@@ -64,6 +79,12 @@ export default function BookingModal({
           name: f.name || String(profile?.full_name || user.user_metadata?.full_name || '').trim(),
           email: f.email || String(profile?.email || user.email || '').trim(),
           phone: f.phone || String(profile?.phone || '').trim(),
+          destination: f.destination || defaults?.destination || '',
+          checkIn: f.checkIn || defaults?.checkIn || '',
+          checkOut: f.checkOut || defaults?.checkOut || '',
+          tier: f.tier || defaults?.tier || '',
+          infantCare: f.infantCare || Boolean(defaults?.infantCare),
+          youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
         }))
       } catch {
         // Silent fail: leave fields empty so the user can type manually.
@@ -100,6 +121,7 @@ export default function BookingModal({
           nanniesNeeded: form.nanniesNeeded,
           tier: form.tier,
           careType: form.careType,
+          infantCare: form.infantCare,
           notes: form.notes,
           nannyId: defaults?.nannyId,
         }),
@@ -225,6 +247,18 @@ export default function BookingModal({
                 </select>
                 <p className="modal-hint">{CARE_TYPES.find(c => c.id === form.careType)?.hint}</p>
               </div>
+              <label className="force-assign" style={{ marginBottom: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={form.infantCare}
+                  onChange={e => setForm(f => ({
+                    ...f,
+                    infantCare: e.target.checked,
+                    youngestAge: e.target.checked && !f.youngestAge ? 'Under 1 year' : f.youngestAge,
+                  }))}
+                />
+                Infant care required (newborn / under 1 year)
+              </label>
               <div className="quote-line">
                 {form.checkIn && form.checkOut
                   ? quoteSummary(quoteBooking({

@@ -4,9 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  bookingBlocksAvailability,
   careTypeLabel,
-  datesOverlap,
   isReplacementOpen,
   isReplacementOverdue,
   parseCareType,
@@ -14,6 +12,7 @@ import {
   statusLabel,
 } from '@/lib/booking'
 import { nannyAssignmentWaHref } from '@/lib/constants'
+import { matchLabel, matchRequestFromBooking, rankNannyMatches } from '@/lib/match'
 import AdminReviews from '@/components/AdminReviews'
 import AdminInbox from '@/components/AdminInbox'
 import AdminDestinations from '@/components/AdminDestinations'
@@ -53,19 +52,10 @@ export default function AdminClient({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [force, setForce] = useState<Record<string, boolean>>({})
 
-  const clashesByBooking = useMemo(() => {
-    const map: Record<string, Record<string, string>> = {}
+  const rankedByBooking = useMemo(() => {
+    const map: Record<string, ReturnType<typeof rankNannyMatches>> = {}
     for (const booking of bookings) {
-      map[booking.id] = {}
-      for (const nanny of nannies) {
-        const hit = bookings.find(other =>
-          other.id !== booking.id
-          && other.nanny_id === nanny.id
-          && bookingBlocksAvailability(other.status, other.nanny_response)
-          && datesOverlap(booking.check_in, booking.check_out, other.check_in, other.check_out),
-        )
-        if (hit) map[booking.id][nanny.id] = `${hit.parent_name} (${hit.check_in} → ${hit.check_out})`
-      }
+      map[booking.id] = rankNannyMatches(nannies, matchRequestFromBooking(booking), bookings)
     }
     return map
   }, [bookings, nannies])
@@ -158,7 +148,8 @@ export default function AdminClient({
           {bookings.map(b => {
             const openReplacement = isReplacementOpen(b)
             const overdue = isReplacementOverdue(b)
-            const nannyClash = clashesByBooking[b.id] || {}
+            const ranked = rankedByBooking[b.id] || []
+            const best = ranked.find(r => r.eligible)
             const assigned = nannies.find(n => n.id === b.nanny_id)
             const assignedApp = assigned
               ? applications.find(a => a.id === assigned.application_id || (assigned.user_id && a.user_id === assigned.user_id))
@@ -190,6 +181,15 @@ export default function AdminClient({
                   </p>
                 )}
                 {errors[b.id] && <p className="field-error-msg" style={{ marginBottom: 10 }}>{errors[b.id]}</p>}
+                {best && (
+                  <p className="match-hint">
+                    Suggested: <strong>{best.nanny.display_name}</strong>
+                    {best.reasons.length ? ` — ${best.reasons.slice(0, 3).join(' · ')}` : ''}
+                  </p>
+                )}
+                {!best && (b.status === 'pending' || openReplacement || !b.nanny_id) && (
+                  <p className="match-hint">No auto-match — nobody is free for these dates, destination, and care needs.</p>
+                )}
                 <div className="field" style={{ marginBottom: 10 }}>
                   <label>Assign nanny</label>
                   <select
@@ -198,14 +198,11 @@ export default function AdminClient({
                     onChange={e => patch(b.id, { action: 'assign', nannyId: e.target.value, force: Boolean(force[b.id]) })}
                   >
                     <option value="">Unassigned</option>
-                    {nannies.map(n => {
-                      const clash = nannyClash[n.id]
-                      return (
-                        <option key={n.id} value={n.id}>
-                          {n.display_name} ({n.tier}){clash ? ` — busy: ${clash}` : ''}
-                        </option>
-                      )
-                    })}
+                    {ranked.map(r => (
+                      <option key={r.nanny.id} value={r.nanny.id}>
+                        {matchLabel(r)}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <label className="force-assign">
@@ -217,6 +214,11 @@ export default function AdminClient({
                   Force assign (skip clash check)
                 </label>
                 <div className="booking-actions" style={{ marginTop: 12 }}>
+                  {best && (!b.nanny_id || openReplacement || b.nanny_id !== best.nanny.id) && b.status !== 'cancelled' && b.status !== 'completed' && (
+                    <button className="btn-coral" disabled={busy === b.id} onClick={() => patch(b.id, { action: 'auto_match' })}>
+                      Auto-match {best.nanny.display_name.split(' ')[0]}
+                    </button>
+                  )}
                   {nannyWa && b.status !== 'cancelled' && b.status !== 'completed' && (
                     <a className="btn-coral" href={nannyWa} target="_blank" rel="noopener noreferrer">
                       WhatsApp nanny

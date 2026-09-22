@@ -10,6 +10,7 @@ import BookingModal, { type BookingDefaults } from '@/components/BookingModal'
 import NannyCard from '@/components/NannyCard'
 import { destinationNames } from '@/lib/destinations'
 import { destinationNannyCount } from '@/lib/data'
+import { CERTIFICATION_FILTERS } from '@/lib/match'
 import type { Destination, Nanny, Review } from '@/lib/types'
 
 function OceanCanvas() {
@@ -141,7 +142,7 @@ export default function HomePage({
   const [bookDefaults, setBookDefaults] = useState<BookingDefaults>({})
   const [faqOpen, setFaqOpen] = useState<number | null>(null)
   const [pricingHover, setPricingHover] = useState(false)
-  const [search, setSearch] = useState({ destination: '', checkIn: '', checkOut: '', tier: '' })
+  const [search, setSearch] = useState({ destination: '', checkIn: '', checkOut: '', tier: '', infant: '', cert: '' })
 
   useEffect(() => {
     const els = document.querySelectorAll('.reveal')
@@ -168,6 +169,8 @@ export default function HomePage({
     if (search.tier) params.set('tier', search.tier)
     if (search.checkIn) params.set('checkIn', search.checkIn)
     if (search.checkOut) params.set('checkOut', search.checkOut)
+    if (search.infant) params.set('infant', '1')
+    if (search.cert) params.set('cert', search.cert)
     router.push(`/nannies${params.toString() ? `?${params}` : ''}`)
   }
 
@@ -241,7 +244,7 @@ export default function HomePage({
               <div className="sec-label">Find Your Match</div>
               <h2 className="sec-title">Search <em>Available Nannies</em></h2>
             </div>
-            <div className="search-box">
+            <div className="search-box nanny-search">
               <div className="sf">
                 <label>Destination</label>
                 <select value={search.destination} onChange={e => setSearch(s => ({ ...s, destination: e.target.value }))}>
@@ -264,6 +267,22 @@ export default function HomePage({
                   <option value="bronze">Bronze</option>
                   <option value="silver">Silver</option>
                   <option value="gold">Gold (Elite)</option>
+                </select>
+              </div>
+              <div className="sf">
+                <label>Infant care</label>
+                <select value={search.infant} onChange={e => setSearch(s => ({ ...s, infant: e.target.value }))}>
+                  <option value="">Any age</option>
+                  <option value="1">Infant / newborn required</option>
+                </select>
+              </div>
+              <div className="sf">
+                <label>Certification</label>
+                <select value={search.cert} onChange={e => setSearch(s => ({ ...s, cert: e.target.value }))}>
+                  <option value="">Any certification</option>
+                  {CERTIFICATION_FILTERS.map(c => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
                 </select>
               </div>
               <button className="search-go" onClick={goSearch}>Search →</button>

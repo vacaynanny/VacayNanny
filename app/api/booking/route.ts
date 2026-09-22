@@ -3,7 +3,7 @@ import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { notifyBookingEvent, sendBookingEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
 import { careTypeLabel, parseCareType, quoteBooking } from '@/lib/booking'
-import { findNannyClashes, jsonFromBookingError, nannyContact } from '@/lib/booking-ops'
+import { findNannyClashes, jsonFromBookingError, nannyContact, suggestMatch } from '@/lib/booking-ops'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,12 +15,13 @@ export async function POST(request: NextRequest) {
     const checkOut = String(body.checkOut || '')
     const phone = String(body.phone || '').trim()
     const childrenCount = String(body.childrenCount || body.children || '')
-    const youngestAge = String(body.youngestAge || body.childrenAges || '')
+    const infantCare = body.infantCare === true || body.infantCare === 'true' || body.infantCare === '1'
+    const youngestAge = String(body.youngestAge || body.childrenAges || '') || (infantCare ? 'Under 1 year' : '')
     const nanniesNeeded = String(body.nanniesNeeded || '1')
     const tier = String(body.tier || '')
     const notes = String(body.notes || body.message || '')
     const careType = parseCareType(body.careType)
-    const nannyId = body.nannyId && !String(body.nannyId).startsWith('fallback-')
+    let nannyId = body.nannyId && !String(body.nannyId).startsWith('fallback-')
       ? String(body.nannyId)
       : null
 
@@ -48,6 +49,20 @@ export async function POST(request: NextRequest) {
     let nannyName: string | null = null
     let nannyEmail: string | null = null
     let nannyPhone: string | null = null
+    if (!nannyId) {
+      const suggested = await suggestMatch(supabase, {
+        destination,
+        checkIn,
+        checkOut,
+        tier,
+        youngestAge,
+        notes,
+        careType,
+        infantRequired: infantCare,
+      })
+      if (suggested) nannyId = suggested.nanny.id
+    }
+
     if (nannyId) {
       const { data } = await supabase.from('nannies').select('daily_rate_kes').eq('id', nannyId).maybeSingle()
       dailyRateKes = data?.daily_rate_kes ?? null

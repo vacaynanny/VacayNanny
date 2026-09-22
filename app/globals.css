@@ -152,6 +152,7 @@ footer.sec   { background:rgba(1,6,10,0.96); }
 
 /* ── SEARCH ── */
 .search-box { background:rgba(255,255,255,0.065);border:1px solid rgba(255,255,255,0.12);border-radius:22px;padding:2.4rem;display:grid;grid-template-columns:repeat(4,1fr) auto;gap:1.2rem;align-items:end;margin-top:2.5rem;backdrop-filter:blur(12px); }
+.search-box.nanny-search { grid-template-columns:repeat(4,1fr); }
 .sf label { display:block;font-size:0.7rem;font-weight:500;letter-spacing:0.6px;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-bottom:0.45rem; }
 .sf select,.sf input { width:100%;padding:0.72rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:11px;color:#fff;font-family:var(--font-dm-sans), 'DM Sans', sans-serif;font-size:0.88rem;outline:none;transition:border-color 0.2s; }
 .sf select:focus,.sf input:focus { border-color:var(--coral); }
@@ -384,6 +385,7 @@ footer.sec   { background:rgba(1,6,10,0.96); }
   .hero-visual { display:none; }
   .nav-links { display:none; }
   .search-box { grid-template-columns:1fr; }
+  .search-box.nanny-search { grid-template-columns:1fr; }
   .pricing-grid { grid-template-columns:1fr;gap:1.4rem; }
   .pricing-grid.has-hover .price-card:not(:hover) { filter:none;opacity:1;transform:none; }
   .price-card:hover { transform:scale(1.02) translateY(-4px); }
@@ -649,6 +651,8 @@ textarea { resize:vertical;min-height:100px; }
 .quote-line { background:rgba(232,113,74,0.1); border:1px solid rgba(232,113,74,0.22); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:0.85rem; color:#fff; }
 .force-assign { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:rgba(255,255,255,0.55); margin:4px 0 8px; }
 .force-assign input { accent-color: var(--coral); }
+.match-hint { font-size:0.82rem; color:rgba(255,255,255,0.5); margin:0 0 10px; line-height:1.45; }
+.match-hint strong { color:#fff; }
 .replacement-banner { background:rgba(232,113,74,0.12); border:1px solid rgba(232,113,74,0.35); color:#ffd0c2; border-radius:10px; padding:10px 14px; font-size:0.82rem; margin-bottom:12px; }
 .replacement-banner.overdue { background:rgba(220,60,60,0.16); border-color:rgba(220,60,60,0.4); color:#ffb4b4; }
 .cal { margin-top:4px; }

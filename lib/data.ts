@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { hasSupabaseConfig } from '@/lib/supabase'
 import { withTimeout } from '@/lib/withTimeout'
+import { filterNannies, type NannySearchFilters } from '@/lib/match'
 import type { Destination, Nanny, Review } from '@/lib/types'
 
 /** Keep pages snappy when Supabase is paused/unreachable. */
@@ -221,11 +222,7 @@ export const FALLBACK_REVIEWS: Review[] = [
   },
 ]
 
-export type NannyFilters = {
-  destination?: string
-  tier?: string
-  q?: string
-}
+export type NannyFilters = NannySearchFilters
 
 export async function getNannies(filters: NannyFilters = {}): Promise<Nanny[]> {
   const local = filterLocal(FALLBACK_NANNIES, filters)
@@ -251,23 +248,7 @@ export async function getNannies(filters: NannyFilters = {}): Promise<Nanny[]> {
 }
 
 function filterLocal(list: Nanny[], filters: NannyFilters) {
-  return list.filter(n => {
-    if (filters.destination && filters.destination !== 'any') {
-      const dest = filters.destination.toLowerCase()
-      if (!n.destinations.some(d => d.toLowerCase().includes(dest))) return false
-    }
-    if (filters.tier && filters.tier !== 'any') {
-      const t = filters.tier.toLowerCase()
-      const map: Record<string, string> = { elite: 'gold', gold: 'gold', professional: 'silver', silver: 'silver', pro: 'silver', bronze: 'bronze', basic: 'bronze', standard: 'bronze' }
-      if (n.tier !== (map[t] || t)) return false
-    }
-    if (filters.q) {
-      const q = filters.q.toLowerCase()
-      const hay = [n.display_name, n.bio, n.town, n.county, ...n.tags, ...n.languages].join(' ').toLowerCase()
-      if (!hay.includes(q)) return false
-    }
-    return true
-  })
+  return filterNannies(list, filters)
 }
 
 export async function getNannyBySlug(slug: string): Promise<Nanny | null> {
