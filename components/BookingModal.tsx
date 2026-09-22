@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { DESTINATIONS } from '@/lib/constants'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { CARE_TYPES, parseCareType, quoteBooking, quoteSummary } from '@/lib/booking'
+import { mergeDestinationChoices } from '@/lib/destinations'
+import { useDestinationNames } from '@/lib/useDestinationNames'
 import type { CareType } from '@/lib/types'
 
 export type BookingDefaults = {
@@ -20,11 +21,14 @@ export default function BookingModal({
   open,
   onClose,
   defaults,
+  destinations,
 }: {
   open: boolean
   onClose: () => void
   defaults?: BookingDefaults
+  destinations?: string[]
 }) {
+  const catalog = useDestinationNames(destinations)
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -156,7 +160,9 @@ export default function BookingModal({
                   <label>Destination</label>
                   <select name="destination" required value={form.destination} onChange={change}>
                     <option value="">Select destination</option>
-                    {DESTINATIONS.map(d => <option key={d}>{d}</option>)}
+                    {mergeDestinationChoices(catalog, [form.destination, defaults?.destination || '']).map(d => (
+                      <option key={d}>{d}</option>
+                    ))}
                     <option>Other</option>
                   </select>
                 </div>

@@ -7,7 +7,15 @@ import BookingModal from '@/components/BookingModal'
 import { tierClass, tierLabel } from '@/lib/constants'
 import type { Nanny, Review } from '@/lib/types'
 
-export default function NannyProfile({ nanny, reviews }: { nanny: Nanny; reviews: Review[] }) {
+export default function NannyProfile({
+  nanny,
+  reviews,
+  destinations,
+}: {
+  nanny: Nanny
+  reviews: Review[]
+  destinations: string[]
+}) {
   const [open, setOpen] = useState(false)
   return (
     <PageShell bookDefaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: nanny.tier }}>
@@ -64,6 +72,7 @@ export default function NannyProfile({ nanny, reviews }: { nanny: Nanny; reviews
         open={open}
         onClose={() => setOpen(false)}
         defaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: nanny.tier }}
+        destinations={destinations}
       />
     </PageShell>
   )

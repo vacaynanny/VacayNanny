@@ -10,6 +10,7 @@ export function siteUrl(path = '') {
   return `${SITE_URL}${suffix}`
 }
 
+/** Fallback names if the destinations table is unreachable. Live lists come from `public.destinations`. */
 export const DESTINATIONS = [
   'Diani Beach',
   'Malindi',

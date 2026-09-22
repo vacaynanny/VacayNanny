@@ -3,6 +3,8 @@ import { createServerClient } from '@/lib/supabase'
 import PageShell from '@/components/PageShell'
 import SignOutButton from '@/components/SignOutButton'
 import Link from 'next/link'
+import { getDestinations } from '@/lib/data'
+import { destinationNames } from '@/lib/destinations'
 import type { Booking, Nanny } from '@/lib/types'
 import NannyPlacements from '@/components/NannyPlacements'
 import NannyProfileEditor from '@/components/NannyProfileEditor'
@@ -14,6 +16,7 @@ export default async function NannyDash() {
   const profile = await requireProfile(['nanny', 'admin'])
   let nanny: Nanny | null = null
   let bookings: Booking[] = []
+  const destinationCatalog = destinationNames(await getDestinations())
   try {
     const supabase = createServerClient()
     const { data } = await supabase.from('nannies').select('*').eq('user_id', profile.id).maybeSingle()
@@ -51,7 +54,7 @@ export default async function NannyDash() {
         )}
         {nanny && (
           <>
-            <NannyProfileEditor nanny={nanny} />
+            <NannyProfileEditor nanny={nanny} destinationCatalog={destinationCatalog} />
             <NannyEarnings bookings={bookings} />
             <NannyPlacements bookings={bookings} />
           </>

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { getNannyBySlug, getReviewsForNanny } from '@/lib/data'
+import { getDestinations, getNannyBySlug, getReviewsForNanny } from '@/lib/data'
+import { destinationNames } from '@/lib/destinations'
 import NannyProfile from './NannyProfile'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -13,8 +14,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const nanny = await getNannyBySlug(slug)
+  const [nanny, destRows] = await Promise.all([getNannyBySlug(slug), getDestinations()])
   if (!nanny) notFound()
   const reviews = await getReviewsForNanny(nanny.id)
-  return <NannyProfile nanny={nanny} reviews={reviews} />
+  return <NannyProfile nanny={nanny} reviews={reviews} destinations={destinationNames(destRows)} />
 }

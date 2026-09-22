@@ -3,7 +3,7 @@ import { createServerClient } from '@/lib/supabase'
 import PageShell from '@/components/PageShell'
 import SignOutButton from '@/components/SignOutButton'
 import AdminClient from './AdminClient'
-import type { Booking, ContactMessage, Nanny, NannyApplication, Review, WaitlistEntry } from '@/lib/types'
+import type { Booking, ContactMessage, Destination, Nanny, NannyApplication, Review, WaitlistEntry } from '@/lib/types'
 
 export const metadata = { title: 'Admin — VacayNanny' }
 
@@ -15,6 +15,7 @@ export default async function AdminPage() {
   let reviews: Review[] = []
   let contactMessages: ContactMessage[] = []
   let waitlist: WaitlistEntry[] = []
+  let destinations: Destination[] = []
   try {
     const supabase = createServerClient()
     const [
@@ -24,6 +25,7 @@ export default async function AdminPage() {
       { data: reviewRows },
       { data: contactRows },
       { data: waitlistRows },
+      { data: destRows },
     ] = await Promise.all([
       supabase.from('nanny_applications').select('*').order('created_at', { ascending: false }),
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
@@ -31,6 +33,7 @@ export default async function AdminPage() {
       supabase.from('reviews').select('*, nannies(id, display_name, slug)').order('created_at', { ascending: false }),
       supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
       supabase.from('waitlist').select('*').order('created_at', { ascending: false }),
+      supabase.from('destinations').select('*').order('sort_order').order('name'),
     ])
     applications = (apps || []) as NannyApplication[]
     bookings = (books || []) as Booking[]
@@ -38,6 +41,7 @@ export default async function AdminPage() {
     reviews = ((reviewRows || []) as Review[]).sort((a, b) => Number(a.is_published) - Number(b.is_published))
     contactMessages = (contactRows || []) as ContactMessage[]
     waitlist = (waitlistRows || []) as WaitlistEntry[]
+    destinations = (destRows || []) as Destination[]
   } catch {}
 
   return (
@@ -45,7 +49,7 @@ export default async function AdminPage() {
       <section className="page-hero">
         <div className="eyebrow">Ops</div>
         <h1>Vetting &amp; <em>bookings</em></h1>
-        <p>Open an application file to review ID photos, CoGC, certificates, and references. Approve, match families, check clashes, run the 2-hour replacement clock, publish family reviews, and work the contact inbox.</p>
+        <p>Open an application file to review ID photos, CoGC, certificates, and references. Approve, match families, edit destinations, check clashes, run the 2-hour replacement clock, publish family reviews, and work the contact inbox.</p>
       </section>
       <div className="sec-inner" style={{ paddingBottom: 8 }}>
         <SignOutButton />
@@ -57,6 +61,7 @@ export default async function AdminPage() {
         reviews={reviews}
         contactMessages={contactMessages}
         waitlist={waitlist}
+        destinations={destinations}
       />
     </PageShell>
   )

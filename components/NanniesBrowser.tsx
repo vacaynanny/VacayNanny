@@ -5,10 +5,15 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import PageShell from '@/components/PageShell'
 import NannyCard from '@/components/NannyCard'
 import BookingModal, { type BookingDefaults } from '@/components/BookingModal'
-import { DESTINATIONS } from '@/lib/constants'
 import type { Nanny } from '@/lib/types'
 
-export default function NanniesBrowser({ initial }: { initial: Nanny[] }) {
+export default function NanniesBrowser({
+  initial,
+  destinations,
+}: {
+  initial: Nanny[]
+  destinations: string[]
+}) {
   const params = useSearchParams()
   const router = useRouter()
   const [destination, setDestination] = useState(params.get('destination') || '')
@@ -50,7 +55,7 @@ export default function NanniesBrowser({ initial }: { initial: Nanny[] }) {
             <label>Destination</label>
             <select value={destination} onChange={e => setDestination(e.target.value)}>
               <option value="">Any destination</option>
-              {DESTINATIONS.map(d => <option key={d}>{d}</option>)}
+              {destinations.map(d => <option key={d}>{d}</option>)}
             </select>
           </div>
           <div className="sf">
@@ -90,7 +95,7 @@ export default function NanniesBrowser({ initial }: { initial: Nanny[] }) {
           </div>
         )}
       </div>
-      <BookingModal open={open} onClose={() => setOpen(false)} defaults={book} />
+      <BookingModal open={open} onClose={() => setOpen(false)} defaults={book} destinations={destinations} />
     </PageShell>
   )
 }

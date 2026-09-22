@@ -16,7 +16,8 @@ import {
 import { nannyAssignmentWaHref } from '@/lib/constants'
 import AdminReviews from '@/components/AdminReviews'
 import AdminInbox from '@/components/AdminInbox'
-import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny, Review, ContactMessage, WaitlistEntry } from '@/lib/types'
+import AdminDestinations from '@/components/AdminDestinations'
+import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny, Review, ContactMessage, WaitlistEntry, Destination } from '@/lib/types'
 
 const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
 const BOOK_STATUSES: BookingStatus[] = ['pending', 'matched', 'confirmed', 'in_progress', 'completed', 'cancelled']
@@ -36,6 +37,7 @@ export default function AdminClient({
   reviews,
   contactMessages,
   waitlist,
+  destinations,
 }: {
   applications: NannyApplication[]
   bookings: Booking[]
@@ -43,9 +45,10 @@ export default function AdminClient({
   reviews: Review[]
   contactMessages: ContactMessage[]
   waitlist: WaitlistEntry[]
+  destinations: Destination[]
 }) {
   const router = useRouter()
-  const [tab, setTab] = useState<'applications' | 'bookings' | 'reviews' | 'inbox'>('applications')
+  const [tab, setTab] = useState<'applications' | 'bookings' | 'reviews' | 'inbox' | 'destinations'>('applications')
   const [busy, setBusy] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [force, setForce] = useState<Record<string, boolean>>({})
@@ -111,6 +114,9 @@ export default function AdminClient({
         </button>
         <button className={tab === 'inbox' ? 'active' : ''} onClick={() => setTab('inbox')}>
           Inbox ({contactMessages.length + waitlist.length})
+        </button>
+        <button className={tab === 'destinations' ? 'active' : ''} onClick={() => setTab('destinations')}>
+          Destinations ({destinations.length})
         </button>
       </div>
 
@@ -249,6 +255,7 @@ export default function AdminClient({
 
       {tab === 'reviews' && <AdminReviews reviews={reviews} />}
       {tab === 'inbox' && <AdminInbox contactMessages={contactMessages} waitlist={waitlist} />}
+      {tab === 'destinations' && <AdminDestinations destinations={destinations} />}
     </div>
   )
 }

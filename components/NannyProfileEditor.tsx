@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { DAYS_OF_WEEK, DESTINATIONS, formatKes, tierLabel } from '@/lib/constants'
+import { DAYS_OF_WEEK, formatKes, tierLabel } from '@/lib/constants'
+import { mergeDestinationChoices } from '@/lib/destinations'
 import type { Nanny } from '@/lib/types'
 
 function Chip({
@@ -27,12 +28,18 @@ function Chip({
   )
 }
 
-export default function NannyProfileEditor({ nanny }: { nanny: Nanny }) {
+export default function NannyProfileEditor({
+  nanny,
+  destinationCatalog,
+}: {
+  nanny: Nanny
+  destinationCatalog: string[]
+}) {
   const router = useRouter()
-  const destinationChoices = useMemo(() => {
-    const extra = nanny.destinations.filter(d => !(DESTINATIONS as readonly string[]).includes(d))
-    return [...DESTINATIONS, ...extra]
-  }, [nanny.destinations])
+  const destinationChoices = useMemo(
+    () => mergeDestinationChoices(destinationCatalog, nanny.destinations),
+    [destinationCatalog, nanny.destinations],
+  )
   const [bio, setBio] = useState(nanny.bio || '')
   const [isActive, setIsActive] = useState(nanny.is_active)
   const [days, setDays] = useState<string[]>(nanny.available_days || [])

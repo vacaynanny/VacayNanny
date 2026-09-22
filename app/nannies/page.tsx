@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { getNannies } from '@/lib/data'
+import { getDestinations, getNannies } from '@/lib/data'
+import { destinationNames } from '@/lib/destinations'
 import NanniesBrowser from '@/components/NanniesBrowser'
 
 export const metadata = {
@@ -10,10 +11,10 @@ export const metadata = {
 export const revalidate = 60
 
 export default async function NanniesPage() {
-  const nannies = await getNannies()
+  const [nannies, destinations] = await Promise.all([getNannies(), getDestinations()])
   return (
     <Suspense>
-      <NanniesBrowser initial={nannies} />
+      <NanniesBrowser initial={nannies} destinations={destinationNames(destinations)} />
     </Suspense>
   )
 }

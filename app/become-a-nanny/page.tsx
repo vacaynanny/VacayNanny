@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { APPLY_EXTRA_DESTINATIONS, mergeDestinationChoices } from '@/lib/destinations'
+import { useDestinationNames } from '@/lib/useDestinationNames'
 
 /* ── Country codes ── */
 const COUNTRY_CODES = [
@@ -200,6 +202,8 @@ export default function BecomeANanny() {
   const [latestEnd, setLatestEnd] = useState('')
   const [willingTravel, setWillingTravel] = useState('')
   const [prefLocations, setPrefLocations] = useState<string[]>([])
+  const catalogDestinations = useDestinationNames()
+  const locationChoices = mergeDestinationChoices(catalogDestinations, [...APPLY_EXTRA_DESTINATIONS, ...prefLocations])
   const [comfortPets, setComfortPets] = useState('')
   const [comfortMultiple, setComfortMultiple] = useState('')
 
@@ -1044,7 +1048,7 @@ export default function BecomeANanny() {
               <h3>Preferred Locations</h3>
               <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px' }}>Select destinations you'd love to work in.</p>
               <div className="check-grid">
-                {['Diani Beach','Malindi','Watamu','Nairobi','Mombasa','Lamu','Masai Mara','Amboseli','Zanzibar','Anywhere in Kenya'].map(loc => (
+                {locationChoices.map(loc => (
                   <CheckItem
                     key={loc} label={loc}
                     checked={prefLocations.includes(loc)}

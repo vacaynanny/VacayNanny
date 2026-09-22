@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentProfile } from '@/lib/auth'
-import { DAYS_OF_WEEK, DESTINATIONS } from '@/lib/constants'
+import { DAYS_OF_WEEK } from '@/lib/constants'
+import { destinationNames, fallbackDestinationNames } from '@/lib/destinations'
 import { uploadPublicPhoto, validateProfileImage } from '@/lib/profile-media'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import type { Nanny } from '@/lib/types'
 
 const DAY_SET = new Set<string>(DAYS_OF_WEEK)
-const DEST_SET = new Set<string>(DESTINATIONS)
 
 function parseStringList(raw: unknown, allowed: Set<string>, extraAllowed: string[] = []) {
   const extras = new Set(extraAllowed)
@@ -64,8 +64,11 @@ export async function PATCH(request: NextRequest) {
     if (!nanny) return NextResponse.json({ error: 'Your public profile is not live yet.' }, { status: 404 })
 
     const current = nanny as Nanny
+    const { data: destRows } = await supabase.from('destinations').select('name').eq('is_active', true)
+    const catalog = destinationNames((destRows || []) as { name: string }[])
+    const destSet = new Set(catalog.length ? catalog : fallbackDestinationNames())
     const availableDays = parseStringList(form.get('availableDays'), DAY_SET)
-    const destinations = parseStringList(form.get('destinations'), DEST_SET, current.destinations || [])
+    const destinations = parseStringList(form.get('destinations'), destSet, current.destinations || [])
     if (destinations.length === 0) {
       return NextResponse.json({ error: 'Select at least one destination.' }, { status: 400 })
     }

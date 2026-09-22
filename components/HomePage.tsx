@@ -8,7 +8,7 @@ import Footer from '@/components/Footer'
 import WAFloat from '@/components/WAFloat'
 import BookingModal, { type BookingDefaults } from '@/components/BookingModal'
 import NannyCard from '@/components/NannyCard'
-import { DESTINATIONS } from '@/lib/constants'
+import { destinationNames } from '@/lib/destinations'
 import { destinationNannyCount } from '@/lib/data'
 import type { Destination, Nanny, Review } from '@/lib/types'
 
@@ -246,7 +246,7 @@ export default function HomePage({
                 <label>Destination</label>
                 <select value={search.destination} onChange={e => setSearch(s => ({ ...s, destination: e.target.value }))}>
                   <option value="">Any destination</option>
-                  {DESTINATIONS.map(d => <option key={d}>{d}</option>)}
+                  {destinationNames(destinations).map(d => <option key={d}>{d}</option>)}
                 </select>
               </div>
               <div className="sf">
@@ -514,7 +514,12 @@ export default function HomePage({
 
         <Footer />
       </div>
-      <BookingModal open={modalOpen} onClose={() => setModalOpen(false)} defaults={bookDefaults} />
+      <BookingModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        defaults={bookDefaults}
+        destinations={destinationNames(destinations)}
+      />
       <WAFloat />
     </>
   )

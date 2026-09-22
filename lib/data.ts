@@ -286,8 +286,8 @@ export async function getDestinations(): Promise<Destination[]> {
           .select('*')
           .eq('is_active', true)
           .order('sort_order')
-        if (error || !data?.length) return FALLBACK_DESTINATIONS
-        return data as Destination[]
+        if (error) return FALLBACK_DESTINATIONS
+        return (data || []) as Destination[]
       } catch {
         return FALLBACK_DESTINATIONS
       }
