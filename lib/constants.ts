@@ -22,6 +22,16 @@ export const DESTINATIONS = [
   'Zanzibar',
 ] as const
 
+export const DAYS_OF_WEEK = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const
+
 export const TIERS = [
   { id: 'bronze', label: 'Bronze', alias: 'Basic', rate: 2200 },
   { id: 'silver', label: 'Silver', alias: 'Professional', rate: 3200 },

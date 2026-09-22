@@ -5,6 +5,8 @@ import SignOutButton from '@/components/SignOutButton'
 import Link from 'next/link'
 import type { Booking, Nanny } from '@/lib/types'
 import NannyPlacements from '@/components/NannyPlacements'
+import NannyProfileEditor from '@/components/NannyProfileEditor'
+import NannyEarnings from '@/components/NannyEarnings'
 
 export const metadata = { title: 'Nanny dashboard — VacayNanny' }
 
@@ -31,11 +33,11 @@ export default async function NannyDash() {
       <section className="page-hero">
         <div className="eyebrow">Nanny portal</div>
         <h1>Your <em>placements</em></h1>
-        <p>Accept or decline assignments. Highlighted calendar days are already booked.</p>
+        <p>Edit your public profile, track placement value, and accept or decline assignments.</p>
       </section>
       <div className="sec-inner dash-page">
         <div className="dash-toolbar">
-          {nanny && <Link href={`/nannies/${nanny.slug}`} className="btn-coral">View public profile</Link>}
+          {nanny?.is_active && <Link href={`/nannies/${nanny.slug}`} className="btn-coral">View public profile</Link>}
           <SignOutButton />
         </div>
         {!nanny && (
@@ -49,13 +51,8 @@ export default async function NannyDash() {
         )}
         {nanny && (
           <>
-            <div className="form-card">
-              <h3>Profile</h3>
-              <div className="review-row"><span className="review-key">Name</span><span className="review-val">{nanny.display_name}</span></div>
-              <div className="review-row"><span className="review-key">Tier</span><span className="review-val">{nanny.tier}</span></div>
-              <div className="review-row"><span className="review-key">Daily rate</span><span className="review-val">KES {nanny.daily_rate_kes.toLocaleString('en-KE')}</span></div>
-              <div className="review-row"><span className="review-key">Status</span><span className="review-val">{nanny.is_active ? 'Live' : 'Hidden'}</span></div>
-            </div>
+            <NannyProfileEditor nanny={nanny} />
+            <NannyEarnings bookings={bookings} />
             <NannyPlacements bookings={bookings} />
           </>
         )}

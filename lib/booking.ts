@@ -1,5 +1,5 @@
 import { TIER_RATES, formatKes, normalizeTier } from '@/lib/constants'
-import type { BookingStatus, CareType } from '@/lib/types'
+import type { Booking, BookingStatus, CareType } from '@/lib/types'
 
 export const REPLACEMENT_SLA_MS = 2 * 60 * 60 * 1000
 
@@ -234,4 +234,47 @@ export function nannyResponseLabel(response?: string | null): string {
     default:
       return 'Not assigned'
   }
+}
+
+export type NannyEarnings = {
+  completedCount: number
+  completedKes: number
+  upcomingCount: number
+  upcomingKes: number
+  inProgressCount: number
+}
+
+export function summarizeNannyEarnings(bookings: Booking[]): NannyEarnings {
+  let completedCount = 0
+  let completedKes = 0
+  let upcomingCount = 0
+  let upcomingKes = 0
+  let inProgressCount = 0
+  for (const booking of bookings) {
+    const amount = booking.total_amount_kes || 0
+    switch (booking.status) {
+      case 'completed':
+        completedCount += 1
+        completedKes += amount
+        break
+      case 'confirmed':
+        upcomingCount += 1
+        upcomingKes += amount
+        break
+      case 'in_progress':
+        inProgressCount += 1
+        upcomingCount += 1
+        upcomingKes += amount
+        break
+      case 'pending':
+      case 'matched':
+      case 'cancelled':
+        break
+      default: {
+        const _never: never = booking.status
+        void _never
+      }
+    }
+  }
+  return { completedCount, completedKes, upcomingCount, upcomingKes, inProgressCount }
 }
