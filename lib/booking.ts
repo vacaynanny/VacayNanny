@@ -125,8 +125,62 @@ export function quoteSummary(quote: ReturnType<typeof quoteBooking>, careType: C
 }
 
 export function hoursUntilCheckIn(checkIn: string, now = new Date()): number {
-  const start = new Date(`${checkIn.slice(0, 10)}T00:00:00+03:00`)
-  return (start.getTime() - now.getTime()) / 3_600_000
+  return (placementStartAt(checkIn).getTime() - now.getTime()) / 3_600_000
+}
+
+/** Midnight East Africa Time on the check-in date. */
+export function placementStartAt(checkIn: string): Date {
+  return new Date(`${checkIn.slice(0, 10)}T00:00:00+03:00`)
+}
+
+/** Midnight East Africa Time on the exclusive care end (checkout day, or next day for same-day). */
+export function placementEndAt(checkIn: string, checkOut: string): Date {
+  return new Date(`${careRangeEnd(checkIn, checkOut)}T00:00:00+03:00`)
+}
+
+/** Next status if check-in/out has elapsed. Never moves a booking backwards. */
+export function dueBookingStatus(
+  booking: { status: BookingStatus; check_in: string; check_out: string },
+  now = new Date(),
+): BookingStatus | null {
+  switch (booking.status) {
+    case 'confirmed': {
+      if (now.getTime() >= placementEndAt(booking.check_in, booking.check_out).getTime()) return 'completed'
+      if (now.getTime() >= placementStartAt(booking.check_in).getTime()) return 'in_progress'
+      return null
+    }
+    case 'in_progress': {
+      if (now.getTime() >= placementEndAt(booking.check_in, booking.check_out).getTime()) return 'completed'
+      return null
+    }
+    case 'pending':
+    case 'matched':
+    case 'completed':
+    case 'cancelled':
+      return null
+    default: {
+      const _never: never = booking.status
+      return _never
+    }
+  }
+}
+
+export function bookingHasThread(booking: { nanny_id?: string | null; status: BookingStatus }): boolean {
+  if (!booking.nanny_id) return false
+  switch (booking.status) {
+    case 'matched':
+    case 'confirmed':
+    case 'in_progress':
+    case 'completed':
+      return true
+    case 'pending':
+    case 'cancelled':
+      return false
+    default: {
+      const _never: never = booking.status
+      return _never
+    }
+  }
 }
 
 export function cancellationRefundPercent(checkIn: string, now = new Date()): number {

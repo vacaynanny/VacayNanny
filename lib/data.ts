@@ -46,6 +46,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
     rating_avg: 5,
     review_count: 48,
     created_at: new Date().toISOString(),
+    safeguarding_completed_at: '2024-06-01T00:00:00.000Z',
   },
   {
     id: 'fallback-faith',
@@ -71,6 +72,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
     rating_avg: 5,
     review_count: 31,
     created_at: new Date().toISOString(),
+    safeguarding_completed_at: null,
   },
   {
     id: 'fallback-grace',
@@ -96,6 +98,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
     rating_avg: 5,
     review_count: 62,
     created_at: new Date().toISOString(),
+    safeguarding_completed_at: '2024-06-01T00:00:00.000Z',
   },
   {
     id: 'fallback-mercy',
@@ -121,6 +124,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
     rating_avg: 4,
     review_count: 22,
     created_at: new Date().toISOString(),
+    safeguarding_completed_at: null,
   },
   {
     id: 'fallback-patience',
@@ -146,6 +150,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
     rating_avg: 5,
     review_count: 55,
     created_at: new Date().toISOString(),
+    safeguarding_completed_at: '2024-06-01T00:00:00.000Z',
   },
   {
     id: 'fallback-rose',
@@ -171,6 +176,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
     rating_avg: 4,
     review_count: 18,
     created_at: new Date().toISOString(),
+    safeguarding_completed_at: null,
   },
 ]
 

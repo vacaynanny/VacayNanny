@@ -3,6 +3,7 @@ import { createServerClient } from '@/lib/supabase'
 import PageShell from '@/components/PageShell'
 import SignOutButton from '@/components/SignOutButton'
 import AdminClient from './AdminClient'
+import { advanceDueBookings } from '@/lib/booking-ops'
 import type { Booking, ContactMessage, Destination, Nanny, NannyApplication, Review, WaitlistEntry } from '@/lib/types'
 
 export const metadata = { title: 'Admin — VacayNanny' }
@@ -18,6 +19,7 @@ export default async function AdminPage() {
   let destinations: Destination[] = []
   try {
     const supabase = createServerClient()
+    await advanceDueBookings(supabase)
     const [
       { data: apps },
       { data: books },

@@ -6,6 +6,7 @@ import type { Booking, Review } from '@/lib/types'
 import SignOutButton from '@/components/SignOutButton'
 import FamilyBookings from '@/components/FamilyBookings'
 import AccountProfileForm from '@/components/AccountProfileForm'
+import { advanceDueBookings } from '@/lib/booking-ops'
 
 export const metadata = { title: 'Your bookings — VacayNanny' }
 
@@ -14,6 +15,7 @@ export default async function AccountPage() {
   let bookings: Booking[] = []
   try {
     const supabase = createServerClient()
+    await advanceDueBookings(supabase)
     const { data } = await supabase
       .from('bookings')
       .select('*, nannies(id, display_name, slug, photo_url, tier, daily_rate_kes)')
@@ -40,7 +42,7 @@ export default async function AccountPage() {
       <section className="page-hero">
         <div className="eyebrow">Family account</div>
         <h1>Hello, <em>{profile.full_name || 'there'}</em></h1>
-        <p>Update your details, then confirm matches, reschedule, cancel, or review a completed placement.</p>
+        <p>Update your details, then confirm matches, message your nanny, reschedule, cancel, or review a completed placement.</p>
       </section>
       <div className="sec-inner dash-page">
         <div className="dash-toolbar">

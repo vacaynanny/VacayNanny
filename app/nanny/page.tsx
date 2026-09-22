@@ -9,6 +9,8 @@ import type { Booking, Nanny } from '@/lib/types'
 import NannyPlacements from '@/components/NannyPlacements'
 import NannyProfileEditor from '@/components/NannyProfileEditor'
 import NannyEarnings from '@/components/NannyEarnings'
+import { advanceDueBookings } from '@/lib/booking-ops'
+import { needsSafeguardingModule } from '@/lib/safeguarding'
 
 export const metadata = { title: 'Nanny dashboard — VacayNanny' }
 
@@ -19,6 +21,7 @@ export default async function NannyDash() {
   const destinationCatalog = destinationNames(await getDestinations())
   try {
     const supabase = createServerClient()
+    await advanceDueBookings(supabase)
     const { data } = await supabase.from('nannies').select('*').eq('user_id', profile.id).maybeSingle()
     nanny = data as Nanny | null
     if (nanny) {
@@ -36,11 +39,12 @@ export default async function NannyDash() {
       <section className="page-hero">
         <div className="eyebrow">Nanny portal</div>
         <h1>Your <em>placements</em></h1>
-        <p>Edit your public profile, track placement value, and accept or decline assignments.</p>
+        <p>Edit your public profile, complete safeguarding if you are Elite, and message families on assigned placements.</p>
       </section>
       <div className="sec-inner dash-page">
         <div className="dash-toolbar">
           {nanny?.is_active && <Link href={`/nannies/${nanny.slug}`} className="btn-coral">View public profile</Link>}
+          {nanny && <Link href="/nanny/safeguarding" className="btn-ghost">Safeguarding module</Link>}
           <SignOutButton />
         </div>
         {!nanny && (
@@ -54,6 +58,17 @@ export default async function NannyDash() {
         )}
         {nanny && (
           <>
+            {needsSafeguardingModule(nanny) && (
+              <div className="form-card">
+                <h3>Elite safeguarding required</h3>
+                <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 8, lineHeight: 1.6 }}>
+                  Your profile is approved at Gold, but families see you as Pro until you pass the safeguarding module.
+                </p>
+                <Link href="/nanny/safeguarding" className="btn-coral" style={{ marginTop: 16, display: 'inline-block' }}>
+                  Complete the module →
+                </Link>
+              </div>
+            )}
             <NannyProfileEditor nanny={nanny} destinationCatalog={destinationCatalog} />
             <NannyEarnings bookings={bookings} />
             <NannyPlacements bookings={bookings} />

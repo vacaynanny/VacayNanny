@@ -156,3 +156,8 @@ where not exists (
   select 1 from public.reviews r
   where r.nanny_id = n.id and r.parent_name = v.parent_name
 );
+
+-- Seed Elite nannies have already completed safeguarding.
+update public.nannies
+set safeguarding_completed_at = coalesce(safeguarding_completed_at, created_at)
+where slug in ('amara-ochieng', 'grace-atieno', 'patience-njeri');

@@ -165,6 +165,7 @@ export async function PATCH(
       status: nextStatus,
       slug,
       notes: typeof notesForMail === 'string' ? notesForMail : null,
+      needsSafeguarding: nextStatus === 'approved' && (app.estimated_tier === 'gold'),
     }).catch(err => console.error('sendApplicationStatusEmail failed:', err))
   }
 

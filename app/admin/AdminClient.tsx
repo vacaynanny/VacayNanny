@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
+  bookingHasThread,
   careTypeLabel,
   isReplacementOpen,
   isReplacementOverdue,
@@ -16,6 +17,7 @@ import { matchLabel, matchRequestFromBooking, rankNannyMatches } from '@/lib/mat
 import AdminReviews from '@/components/AdminReviews'
 import AdminInbox from '@/components/AdminInbox'
 import AdminDestinations from '@/components/AdminDestinations'
+import BookingThread from '@/components/BookingThread'
 import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny, Review, ContactMessage, WaitlistEntry, Destination } from '@/lib/types'
 
 const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
@@ -248,6 +250,9 @@ export default function AdminClient({
                     </button>
                   ))}
                 </div>
+                {bookingHasThread(b) && (
+                  <BookingThread bookingId={b.id} viewerRole="admin" counterpartName={assigned?.display_name || b.parent_name} />
+                )}
               </div>
             )
           })}

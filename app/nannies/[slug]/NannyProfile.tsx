@@ -5,6 +5,7 @@ import Link from 'next/link'
 import PageShell from '@/components/PageShell'
 import BookingModal from '@/components/BookingModal'
 import { tierClass, tierLabel } from '@/lib/constants'
+import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Nanny, Review } from '@/lib/types'
 
 export default function NannyProfile({
@@ -17,8 +18,10 @@ export default function NannyProfile({
   destinations: string[]
 }) {
   const [open, setOpen] = useState(false)
+  const shownTier = publicTier(nanny)
+  const rate = publicDailyRate(nanny)
   return (
-    <PageShell bookDefaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: nanny.tier }}>
+    <PageShell bookDefaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: shownTier }}>
       <section className="page-hero" style={{ paddingBottom: 24 }}>
         <Link href="/nannies" className="nav-back" style={{ justifyContent: 'center', marginBottom: 16 }}>← All nannies</Link>
         <h1>{nanny.display_name}</h1>
@@ -59,8 +62,8 @@ export default function NannyProfile({
           )}
         </div>
         <aside className="profile-aside form-card">
-          <span className={`tier-pill ${tierClass(nanny.tier)}`}>{tierLabel(nanny.tier)}</span>
-          <div className="price-big" style={{ margin: '16px 0 4px' }}><sup>KES</sup>{nanny.daily_rate_kes.toLocaleString('en-KE')}<sub>/day</sub></div>
+          <span className={`tier-pill ${tierClass(shownTier)}`}>{tierLabel(shownTier)}</span>
+          <div className="price-big" style={{ margin: '16px 0 4px' }}><sup>KES</sup>{rate.toLocaleString('en-KE')}<sub>/day</sub></div>
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginBottom: 16 }}>8-hour shift · 2-hour replacement guarantee</p>
           <div className="nc-stars" style={{ marginBottom: 20 }}>
             <span>{'★'.repeat(Math.round(nanny.rating_avg || 5))}</span> {nanny.rating_avg.toFixed(1)} ({nanny.review_count} reviews)
@@ -71,7 +74,7 @@ export default function NannyProfile({
       <BookingModal
         open={open}
         onClose={() => setOpen(false)}
-        defaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: nanny.tier }}
+        defaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: shownTier }}
         destinations={destinations}
       />
     </PageShell>

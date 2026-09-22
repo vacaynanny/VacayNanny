@@ -1,5 +1,6 @@
 import { bookingBlocksAvailability, datesOverlap, parseCareType } from '@/lib/booking'
 import { DESTINATIONS, normalizeTier } from '@/lib/constants'
+import { publicTier } from '@/lib/safeguarding'
 import type { Booking, BookingStatus, CareType, Nanny, NannyTier } from '@/lib/types'
 
 export const CERTIFICATION_FILTERS = [
@@ -187,7 +188,7 @@ export function filterNannies(list: Nanny[], filters: NannySearchFilters): Nanny
 
   return list.filter(n => {
     if (dest && dest.toLowerCase() !== 'any' && coversDestination(n, dest) === 'none') return false
-    if (tier && n.tier !== tier) return false
+    if (tier && publicTier(n) !== tier) return false
     if (filters.infant && !hasInfantCare(n)) return false
     if (cert && !hasCertification(n, cert)) return false
     if (busy?.has(n.id)) return false
@@ -243,12 +244,13 @@ export function scoreNannyMatch(nanny: Nanny, request: MatchRequest, bookings: C
     }
   }
 
+  const shownTier = publicTier(nanny)
   const wantedTier = normalizeTier(request.tier || '')
   if (wantedTier) {
-    if (nanny.tier === wantedTier) {
+    if (shownTier === wantedTier) {
       score += 10
       reasons.push(`${wantedTier} tier`)
-    } else if (tierRank(nanny.tier) > tierRank(wantedTier)) {
+    } else if (tierRank(shownTier) > tierRank(wantedTier)) {
       score += 4
     }
   }
@@ -321,11 +323,12 @@ export function matchRequestFromBooking(booking: Pick<
 }
 
 export function matchLabel(result: MatchResult): string {
+  const tier = publicTier(result.nanny)
   if (!result.eligible) {
-    return `${result.nanny.display_name} (${result.nanny.tier}) — ${result.blockers[0] || 'not a match'}`
+    return `${result.nanny.display_name} (${tier}) — ${result.blockers[0] || 'not a match'}`
   }
   const extra = result.reasons.slice(0, 3).join(' · ')
   return extra
-    ? `${result.nanny.display_name} (${result.nanny.tier}) — ${extra}`
-    : `${result.nanny.display_name} (${result.nanny.tier})`
+    ? `${result.nanny.display_name} (${tier}) — ${extra}`
+    : `${result.nanny.display_name} (${tier})`
 }

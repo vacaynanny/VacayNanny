@@ -294,8 +294,10 @@ export async function sendApplicationStatusEmail(data: {
   status: 'approved' | 'rejected'
   slug?: string | null
   notes?: string | null
+  needsSafeguarding?: boolean
 }) {
   const dashboard = siteUrl('/nanny')
+  const training = siteUrl('/nanny/safeguarding')
   const profile = data.slug ? siteUrl(`/nannies/${data.slug}`) : dashboard
   const approved = data.status === 'approved'
   const html = htmlWrapper(approved
@@ -303,6 +305,7 @@ export async function sendApplicationStatusEmail(data: {
       <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.6);line-height:1.6;">
         Hi ${data.fullName}, your VacayNanny application is <strong style="color:#fff;">approved</strong>. Your profile is live and you can start receiving placements.
       </p>
+      ${data.needsSafeguarding ? `<p style="margin:0 0 16px;font-size:15px;color:rgba(255,255,255,0.65);line-height:1.6;">Complete the <a href="${training}" style="color:#E8714A;">Elite safeguarding module</a> to show the Gold badge on your public profile.</p>` : ''}
       <p style="margin:0 0 16px;"><a href="${profile}" style="color:#E8714A;">View your public profile →</a></p>
       <p style="margin:0;"><a href="${dashboard}" style="color:#E8714A;">Open nanny dashboard →</a></p>`
     : `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:700;color:#fff;">Application update</h2>
@@ -564,7 +567,7 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
       return {
         parentSubject: `Your nanny placement has started — ${ctx.destination}`,
         parentBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Placement started</h2>
-          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">${ctx.nannyName || 'Your nanny'} is now on assignment. WhatsApp us if you need a replacement.</p>${details}`,
+          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">${ctx.nannyName || 'Your nanny'} is now on assignment. Message them in your <a href="${familyLink}" style="color:#E8714A;">booking thread</a> if you need anything, or request a replacement from your account.</p>${details}`,
         nannySubject: `Placement in progress — ${ctx.destination}`,
         nannyBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">In progress</h2>${details}`,
         adminSubject: `[In progress] ${ctx.parentName} — ${ctx.destination}`,
@@ -574,7 +577,7 @@ function eventCopy(event: BookingEmailEvent, ctx: BookingMailContext): {
       return {
         parentSubject: `Thanks for booking VacayNanny — ${ctx.destination}`,
         parentBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Completed</h2>
-          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">We hope the placement went smoothly. Reply to this email if you'd like to leave a note for the team.</p>${details}`,
+          <p style="color:rgba(255,255,255,0.65);line-height:1.6;">We hope the placement went smoothly. You can leave a review and keep using the booking thread from <a href="${familyLink}" style="color:#E8714A;">your account</a>.</p>${details}`,
         nannySubject: `Placement completed — ${ctx.destination}`,
         nannyBody: `<h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">Completed</h2>
           <p style="color:rgba(255,255,255,0.65);line-height:1.6;">This placement is complete. Payouts are processed by VacayNanny after completed bookings.</p>${details}`,
@@ -644,4 +647,27 @@ export async function notifyBookingEvent(event: BookingEmailEvent, ctx: BookingM
   results.forEach((r, i) => {
     if (r.error) console.error(`Booking lifecycle email ${i} (${event}) failed:`, r.error)
   })
+}
+
+export async function sendBookingMessageEmail(data: {
+  to: string
+  recipientName: string
+  senderLabel: string
+  destination: string
+  preview: string
+  inboxPath: '/account' | '/nanny' | '/admin'
+}) {
+  const html = htmlWrapper(`
+    <h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;color:#fff;">New message — ${data.destination}</h2>
+    <p style="color:rgba(255,255,255,0.65);line-height:1.6;">Hi ${data.recipientName}, ${data.senderLabel} wrote in your VacayNanny booking thread:</p>
+    <p style="margin:16px 0;padding:16px;background:rgba(255,255,255,0.05);border-radius:12px;color:#fff;line-height:1.6;">${data.preview}</p>
+    <p><a href="${siteUrl(data.inboxPath)}" style="color:#E8714A;">Open the thread →</a></p>
+  `)
+  const result = await sendOrSkip({
+    from: FROM_ADDRESS,
+    to: data.to,
+    subject: `New booking message — ${data.destination}`,
+    html,
+  })
+  if (result.error) console.error('Booking message email failed:', result.error)
 }

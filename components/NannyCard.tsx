@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { formatKes, tierClass, tierLabel } from '@/lib/constants'
+import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Nanny } from '@/lib/types'
 
 export default function NannyCard({
@@ -9,11 +10,13 @@ export default function NannyCard({
   nanny: Nanny
   onBook?: (nanny: Nanny) => void
 }) {
+  const shownTier = publicTier(nanny)
+  const rate = publicDailyRate(nanny)
   return (
     <div className="nanny-card">
       <Link href={`/nannies/${nanny.slug}`} className="nc-photo" style={{ display: 'block' }}>
         <img src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} />
-        <span className={`tier-pill ${tierClass(nanny.tier)}`}>{tierLabel(nanny.tier)}</span>
+        <span className={`tier-pill ${tierClass(shownTier)}`}>{tierLabel(shownTier)}</span>
       </Link>
       <div className="nc-body">
         <Link href={`/nannies/${nanny.slug}`} className="nc-name" style={{ color: 'inherit', textDecoration: 'none' }}>
@@ -29,7 +32,7 @@ export default function NannyCard({
           ))}
         </div>
         <div className="nc-foot">
-          <div className="nc-rate">{formatKes(nanny.daily_rate_kes)}<small>/day</small></div>
+          <div className="nc-rate">{formatKes(rate)}<small>/day</small></div>
           {onBook ? (
             <button className="book-btn" onClick={() => onBook(nanny)}>Book Now</button>
           ) : (

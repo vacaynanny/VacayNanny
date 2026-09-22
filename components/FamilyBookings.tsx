@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BookingReviewForm from '@/components/BookingReviewForm'
+import BookingThread from '@/components/BookingThread'
 import {
+  bookingHasThread,
   canLeaveReview,
   cancellationRefundPercent,
   careTypeLabel,
@@ -136,6 +138,9 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
             )}
             {canLeaveReview(b) && (
               <BookingReviewForm bookingId={b.id} nannyName={nannyName} />
+            )}
+            {bookingHasThread(b) && (
+              <BookingThread bookingId={b.id} viewerRole="parent" counterpartName={nannyName || undefined} />
             )}
           </div>
         )

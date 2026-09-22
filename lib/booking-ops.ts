@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   bookingBlocksAvailability,
+  bookingHasThread,
   cancellationRefundPercent,
   datesOverlap,
+  dueBookingStatus,
   isReplacementOpen,
   parseCareType,
   quoteBooking,
@@ -12,7 +14,7 @@ import {
 import { notifyBookingEvent, type BookingEmailEvent } from '@/lib/email'
 import { waDigits } from '@/lib/constants'
 import { bestAvailableMatch, matchRequestFromBooking, type ClashRow } from '@/lib/match'
-import type { Booking, BookingStatus, CareType, Nanny } from '@/lib/types'
+import type { Booking, BookingMessageRole, BookingStatus, CareType, Nanny, Profile } from '@/lib/types'
 
 export type BookingClash = {
   id: string
@@ -456,4 +458,67 @@ export async function applyBookingMutation(
     note,
   })
   return { booking: next, event }
+}
+
+export async function resolveBookingAccess(
+  supabase: SupabaseClient,
+  profile: Profile,
+  booking: Booking,
+): Promise<{ isParent: boolean; isAssignedNanny: boolean; isAdmin: boolean; senderRole: BookingMessageRole | null }> {
+  const isParent =
+    booking.parent_id === profile.id ||
+    Boolean(profile.email && booking.email.toLowerCase() === profile.email.toLowerCase())
+  const { data: nannyRow } = await supabase
+    .from('nannies')
+    .select('id')
+    .eq('user_id', profile.id)
+    .maybeSingle()
+  const isAssignedNanny = Boolean(nannyRow && booking.nanny_id === nannyRow.id)
+  const isAdmin = profile.role === 'admin'
+  let senderRole: BookingMessageRole | null = null
+  if (isAdmin) senderRole = 'admin'
+  else if (isAssignedNanny) senderRole = 'nanny'
+  else if (isParent) senderRole = 'parent'
+  return { isParent, isAssignedNanny, isAdmin, senderRole }
+}
+
+export async function advanceDueBookings(supabase: SupabaseClient): Promise<number> {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`*, ${NANNY_EMBED}`)
+    .in('status', ['confirmed', 'in_progress'])
+  if (error) {
+    console.error('advanceDueBookings load failed:', error)
+    return 0
+  }
+
+  let changed = 0
+  for (const row of data || []) {
+    const booking = normalizeBooking(row as Record<string, unknown>)
+    const nextStatus = dueBookingStatus(booking)
+    if (!nextStatus || nextStatus === booking.status) continue
+    const { data: updated, error: updErr } = await supabase
+      .from('bookings')
+      .update({ status: nextStatus })
+      .eq('id', booking.id)
+      .eq('status', booking.status)
+      .select('id')
+      .maybeSingle()
+    if (updErr) {
+      console.error('advanceDueBookings update failed:', updErr)
+      continue
+    }
+    if (!updated) continue
+    const next = await loadBooking(supabase, booking.id)
+    const event: BookingEmailEvent = nextStatus === 'completed' ? 'completed' : 'in_progress'
+    await fireEvent(supabase, event, next)
+    changed += 1
+  }
+  return changed
+}
+
+export function assertBookingThread(booking: Booking) {
+  if (!bookingHasThread(booking)) {
+    throw new BookingActionError('Chat opens once a nanny is assigned.')
+  }
 }

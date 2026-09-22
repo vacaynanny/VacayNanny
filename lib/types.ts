@@ -57,6 +57,7 @@ export type Nanny = {
   is_active: boolean
   rating_avg: number
   review_count: number
+  safeguarding_completed_at: string | null
   created_at: string
 }
 
@@ -186,6 +187,17 @@ export type ContactMessage = {
   email: string
   subject: string | null
   message: string
+  created_at: string
+}
+
+export type BookingMessageRole = 'parent' | 'nanny' | 'admin'
+
+export type BookingMessage = {
+  id: string
+  booking_id: string
+  sender_id: string | null
+  sender_role: BookingMessageRole
+  body: string
   created_at: string
 }
 

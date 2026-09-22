@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BookingCalendar from '@/components/BookingCalendar'
-import { careTypeLabel, parseCareType, statusLabel } from '@/lib/booking'
+import BookingThread from '@/components/BookingThread'
+import { bookingHasThread, careTypeLabel, parseCareType, statusLabel } from '@/lib/booking'
 import type { Booking } from '@/lib/types'
 
 export default function NannyPlacements({ bookings }: { bookings: Booking[] }) {
@@ -62,6 +63,9 @@ export default function NannyPlacements({ bookings }: { bookings: Booking[] }) {
                   <button className="btn-coral" disabled={busy === b.id} onClick={() => act(b.id, 'accept')}>Accept</button>
                   <button className="btn-ghost" disabled={busy === b.id} onClick={() => act(b.id, 'decline')}>Decline</button>
                 </div>
+              )}
+              {bookingHasThread(b) && (
+                <BookingThread bookingId={b.id} viewerRole="nanny" counterpartName={b.parent_name} />
               )}
             </div>
           )
