@@ -45,7 +45,7 @@ export default async function AdminPage() {
       <section className="page-hero">
         <div className="eyebrow">Ops</div>
         <h1>Vetting &amp; <em>bookings</em></h1>
-        <p>Approve applications, match families, check clashes, run the 2-hour replacement clock, publish family reviews, and work the contact inbox.</p>
+        <p>Open an application file to review ID photos, CoGC, certificates, and references. Approve, match families, check clashes, run the 2-hour replacement clock, publish family reviews, and work the contact inbox.</p>
       </section>
       <div className="sec-inner" style={{ paddingBottom: 8 }}>
         <SignOutButton />

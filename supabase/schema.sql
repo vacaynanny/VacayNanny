@@ -101,6 +101,7 @@ create table if not exists public.nanny_applications (
   estimated_tier        public.nanny_tier not null default 'bronze',
   status                public.application_status not null default 'pending',
   admin_notes           text,
+  interview_at          timestamptz,
   consent_background    boolean not null default false,
   consent_terms         boolean not null default false,
   consent_accuracy      boolean not null default false,

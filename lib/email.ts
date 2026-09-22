@@ -323,6 +323,32 @@ export async function sendApplicationStatusEmail(data: {
   if (result.error) console.error('Application status email error:', result.error)
 }
 
+export async function sendInterviewInviteEmail(data: {
+  fullName: string
+  email: string
+  whenLabel: string
+  notes?: string | null
+}) {
+  const html = htmlWrapper(`
+    <h2 style="margin:0 0 8px;font-family:Georgia,serif;font-size:24px;font-weight:700;color:#fff;">Interview scheduled</h2>
+    <p style="margin:0 0 28px;font-size:15px;color:rgba(255,255,255,0.6);line-height:1.6;">
+      Hi ${data.fullName}, our vetting team would like to speak with you on <strong style="color:#fff;">${data.whenLabel} (East Africa Time)</strong>.
+    </p>
+    ${data.notes ? `<p style="margin:0 0 16px;font-size:14px;color:rgba(255,255,255,0.65);line-height:1.6;">${data.notes}</p>` : ''}
+    <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.45);">
+      We'll confirm the video or phone details by WhatsApp. Questions? Message us at
+      <a href="${waLink('Hi VacayNanny, I have a question about my interview.')}" style="color:#E8714A;text-decoration:none;">+254 796 930 612</a>.
+    </p>
+  `)
+  const result = await sendOrSkip({
+    from: FROM_ADDRESS,
+    to: data.email,
+    subject: `VacayNanny interview — ${data.whenLabel}`,
+    html,
+  })
+  if (result.error) console.error('Interview invite email error:', result.error)
+}
+
 // ── Booking lifecycle emails ────────────────────────────────────────────────
 
 export type BookingEmailEvent =

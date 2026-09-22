@@ -1,30 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase'
-import { createSupabaseServer } from '@/lib/supabase/server'
+import { requireAdminProfile } from '@/lib/auth'
+import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { slugify, TIER_RATES } from '@/lib/constants'
-import { sendApplicationStatusEmail } from '@/lib/email'
-import type { ApplicationStatus, NannyTier } from '@/lib/types'
+import { sendApplicationStatusEmail, sendInterviewInviteEmail } from '@/lib/email'
+import {
+  formatNairobiInterview,
+  fromNairobiDatetimeLocal,
+  sortDocuments,
+} from '@/lib/application-docs'
+import type { ApplicationStatus, NannyApplication, NannyDocument, NannyReference, NannyTier } from '@/lib/types'
 
-async function requireAdmin() {
-  const auth = await createSupabaseServer()
-  const { data: { user } } = await auth.auth.getUser()
-  if (!user) return null
-  const { data: profile } = await auth.from('profiles').select('role').eq('id', user.id).maybeSingle()
-  if (profile?.role !== 'admin') return null
-  return user
+const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
+
+function parseStatus(raw: unknown): ApplicationStatus | undefined {
+  if (typeof raw !== 'string') return undefined
+  return APP_STATUSES.find(s => s === raw)
+}
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const admin = await requireAdminProfile()
+  if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasSupabaseConfig() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Applications are not configured yet.' }, { status: 503 })
+  }
+
+  const { id } = await params
+  const supabase = createServerClient()
+  const { data: app, error } = await supabase.from('nanny_applications').select('*').eq('id', id).maybeSingle()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!app) return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+
+  const [{ data: refs }, { data: docs }] = await Promise.all([
+    supabase.from('nanny_references').select('*').eq('application_id', id).order('sort_order'),
+    supabase.from('nanny_documents').select('*').eq('application_id', id),
+  ])
+
+  return NextResponse.json({
+    application: app as NannyApplication,
+    references: (refs || []) as NannyReference[],
+    documents: sortDocuments((docs || []) as NannyDocument[]),
+  })
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const admin = await requireAdmin()
+  const admin = await requireAdminProfile()
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasSupabaseConfig() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Applications are not configured yet.' }, { status: 503 })
+  }
 
   const { id } = await params
-  const body = await request.json()
-  const status = body.status as ApplicationStatus | undefined
-  const adminNotes = body.adminNotes as string | undefined
+  const body = await request.json().catch(() => ({})) as {
+    status?: unknown
+    adminNotes?: unknown
+    interviewAt?: unknown
+    notifyInterview?: unknown
+  }
+  const status = parseStatus(body.status)
+  const adminNotes = typeof body.adminNotes === 'string' ? body.adminNotes : undefined
+  const interviewProvided = Object.prototype.hasOwnProperty.call(body, 'interviewAt')
+  const interviewAt = interviewProvided
+    ? (typeof body.interviewAt === 'string' ? fromNairobiDatetimeLocal(body.interviewAt) : null)
+    : undefined
+  const notifyInterview = body.notifyInterview === true
+
   const supabase = createServerClient()
 
   const { data: app, error: fetchErr } = await supabase
@@ -35,14 +80,27 @@ export async function PATCH(
   if (fetchErr || !app) return NextResponse.json({ error: 'Application not found' }, { status: 404 })
 
   const previousStatus = app.status as ApplicationStatus
+  const previousInterview = (app as { interview_at?: string | null }).interview_at ?? null
   const updates: Record<string, unknown> = {}
   if (status) updates.status = status
   if (adminNotes !== undefined) updates.admin_notes = adminNotes
+  if (interviewProvided) {
+    updates.interview_at = interviewAt
+    if (interviewAt && !status && previousStatus !== 'approved' && previousStatus !== 'rejected') {
+      updates.status = 'interview'
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 })
+  }
 
   const { error: updErr } = await supabase.from('nanny_applications').update(updates).eq('id', id)
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 })
 
-  if (status === 'approved') {
+  const nextStatus = (updates.status as ApplicationStatus | undefined) || previousStatus
+
+  if (nextStatus === 'approved') {
     const { data: existing } = await supabase.from('nannies').select('id').eq('application_id', id).maybeSingle()
     if (!existing) {
       const base = slugify(app.full_name) || 'nanny'
@@ -94,19 +152,30 @@ export async function PATCH(
     }
   }
 
-  if (status && status !== previousStatus && (status === 'approved' || status === 'rejected')) {
+  const notesForMail = adminNotes !== undefined ? adminNotes : app.admin_notes
+  if (nextStatus !== previousStatus && (nextStatus === 'approved' || nextStatus === 'rejected')) {
     let slug: string | null = null
-    if (status === 'approved') {
+    if (nextStatus === 'approved') {
       const { data: live } = await supabase.from('nannies').select('slug').eq('application_id', id).maybeSingle()
       slug = live?.slug ?? null
     }
     sendApplicationStatusEmail({
       fullName: app.full_name,
       email: app.email,
-      status,
+      status: nextStatus,
       slug,
-      notes: typeof adminNotes === 'string' ? adminNotes : app.admin_notes,
+      notes: typeof notesForMail === 'string' ? notesForMail : null,
     }).catch(err => console.error('sendApplicationStatusEmail failed:', err))
+  }
+
+  const nextInterview = interviewProvided ? interviewAt : previousInterview
+  if (notifyInterview && nextInterview) {
+    sendInterviewInviteEmail({
+      fullName: app.full_name,
+      email: app.email,
+      whenLabel: formatNairobiInterview(nextInterview),
+      notes: typeof notesForMail === 'string' ? notesForMail : null,
+    }).catch(err => console.error('sendInterviewInviteEmail failed:', err))
   }
 
   return NextResponse.json({ success: true })

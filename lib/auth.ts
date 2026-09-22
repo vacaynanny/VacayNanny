@@ -56,3 +56,9 @@ export async function requireProfile(roles?: UserRole[]) {
   if (roles && !roles.includes(profile.role)) redirect('/')
   return profile
 }
+
+export async function requireAdminProfile() {
+  const profile = await getCurrentProfile()
+  if (!profile || profile.role !== 'admin') return null
+  return profile
+}

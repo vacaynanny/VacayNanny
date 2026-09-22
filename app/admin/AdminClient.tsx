@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   bookingBlocksAvailability,
   careTypeLabel,
@@ -124,6 +125,9 @@ export default function AdminClient({
               <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.55)', margin: '10px 0' }}>
                 {a.experience_years} yrs · {a.languages.join(', ')} · CoGC: {a.cogc_status || '—'}
               </p>
+              <div className="booking-actions" style={{ marginTop: 0, marginBottom: 12 }}>
+                <Link className="btn-coral" href={`/admin/applications/${a.id}`}>Open file</Link>
+              </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {APP_STATUSES.map(s => (
                   <button

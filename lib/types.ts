@@ -143,6 +143,10 @@ export type NannyApplication = {
   estimated_tier: NannyTier
   status: ApplicationStatus
   admin_notes: string | null
+  interview_at: string | null
+  consent_background?: boolean
+  consent_terms?: boolean
+  consent_accuracy?: boolean
   created_at: string
 }
 
