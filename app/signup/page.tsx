@@ -8,12 +8,15 @@ import { hasSupabaseConfig } from '@/lib/supabase'
 import { SITE_URL } from '@/lib/constants'
 import Nav from '@/components/Nav'
 
+type SignupRole = 'parent' | 'nanny'
+
 export default function SignupPage() {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'parent' | 'nanny'>('parent')
+  const [showPassword, setShowPassword] = useState(false)
+  const [role, setRole] = useState<SignupRole>('parent')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -48,77 +51,125 @@ export default function SignupPage() {
   return (
     <>
       <Nav />
-      <div className="site-wrap page-inner">
-        <section className="page-hero">
-          <div className="eyebrow">Account</div>
-          <h1>Create your <em>account</em></h1>
-          <p>Book faster as a parent, or continue a nanny application with a saved login.</p>
-        </section>
-        {done ? (
-          <div className="auth-card">
-            <h2 style={{ fontFamily: 'Playfair Display, serif', marginBottom: 12 }}>Check your email</h2>
-            <p style={{ color: 'rgba(255,255,255,0.6)' }}>We sent a confirmation link to {email}. After confirming, you can sign in.</p>
+      <div className="login-stage">
+        <aside className="login-visual">
+          <div className="login-visual-copy">
+            <p className="login-visual-kicker">Holiday childcare</p>
+            <h2>An account for the <em>family</em>, or the nanny.</h2>
+            <p>Use the email already on a booking or an application. Confirm it, and those records stay with you.</p>
+            <ul className="login-points">
+              <li>Family bookings</li>
+              <li>Nanny applications</li>
+              <li>One confirmed email</li>
+            </ul>
           </div>
-        ) : (
-          <form className="auth-card" onSubmit={submit} autoComplete="on">
-            <div className="field">
-              <label htmlFor="signup-name">Full name</label>
-              <input
-                id="signup-name"
-                type="text"
-                name="name"
-                autoComplete="name"
-                required
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                placeholder="Jane Smith"
-              />
+        </aside>
+        <div className="login-panel">
+          {done ? (
+            <div className="auth-card">
+              <div className="login-heading">
+                <div className="eyebrow">Account</div>
+                <h1>Check your <em>email</em></h1>
+                <p>We sent a confirmation link to {email}. Open it, then sign in.</p>
+              </div>
+              <Link className="btn-submit" href="/login">Go to sign in</Link>
             </div>
-            <div className="field">
-              <label htmlFor="signup-email">Email</label>
-              <input
-                id="signup-email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@email.com"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="signup-password">Password</label>
-              <input
-                id="signup-password"
-                type="password"
-                name="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="signup-role">I am a</label>
-              <select
-                id="signup-role"
-                name="role"
-                value={role}
-                onChange={e => setRole(e.target.value as 'parent' | 'nanny')}
-              >
-                <option value="parent">Parent booking childcare</option>
-                <option value="nanny">Nanny applying to join</option>
-              </select>
-            </div>
-            {error && <p className="field-error-msg">{error}</p>}
-            <button className="btn-submit" type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
-            <p className="auth-switch">Already have an account? <Link href="/login">Sign in</Link></p>
-          </form>
-        )}
+          ) : (
+            <form className="auth-card" onSubmit={submit} autoComplete="on">
+              <div className="login-heading">
+                <div className="eyebrow">Account</div>
+                <h1>Create your <em>account</em></h1>
+                <p>Parents book from here. Nannies use it to continue an application.</p>
+              </div>
+              <div className="field">
+                <label htmlFor="signup-name">Full name</label>
+                <input
+                  id="signup-name"
+                  type="text"
+                  name="name"
+                  autoComplete="name"
+                  required
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="signup-email">Email</label>
+                <input
+                  id="signup-email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? 'signup-error' : undefined}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="signup-password">Password</label>
+                <div className="login-password">
+                  <input
+                    id="signup-password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    autoComplete="new-password"
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? 'signup-error' : undefined}
+                  />
+                  <button
+                    className="login-reveal"
+                    type="button"
+                    aria-pressed={showPassword}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword(value => !value)}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              <fieldset className="signup-roles">
+                <legend>I am a</legend>
+                <div className="signup-role-row">
+                  <label className="signup-role">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="parent"
+                      checked={role === 'parent'}
+                      onChange={() => setRole('parent')}
+                    />
+                    <span>Parent</span>
+                    <small>Booking childcare</small>
+                  </label>
+                  <label className="signup-role">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="nanny"
+                      checked={role === 'nanny'}
+                      onChange={() => setRole('nanny')}
+                    />
+                    <span>Nanny</span>
+                    <small>Applying to join</small>
+                  </label>
+                </div>
+              </fieldset>
+              {error && <p id="signup-error" className="field-error-msg" role="alert">{error}</p>}
+              <button className="btn-submit" type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create account'}</button>
+              <p className="auth-switch">Already have an account? <Link href="/login">Sign in</Link></p>
+            </form>
+          )}
+        </div>
       </div>
     </>
   )

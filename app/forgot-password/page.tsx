@@ -36,43 +36,60 @@ function ForgotPasswordForm() {
   return (
     <>
       <Nav />
-      <div className="site-wrap page-inner">
-        <section className="page-hero">
-          <div className="eyebrow">Account</div>
-          <h1>Reset your <em>password</em></h1>
-          <p>Enter the email on your VacayNanny account and we&apos;ll send a reset link.</p>
-        </section>
-        {done ? (
-          <div className="auth-card">
-            <h2 style={{ fontFamily: 'Playfair Display, serif', marginBottom: 12 }}>Check your email</h2>
-            <p style={{ color: 'rgba(255,255,255,0.6)' }}>
-              If an account exists for {email}, you&apos;ll get a link to choose a new password. It expires after a short time.
-            </p>
-            <p className="auth-switch"><Link href="/login">Back to sign in</Link></p>
+      <div className="login-stage">
+        <aside className="login-visual">
+          <div className="login-visual-copy">
+            <p className="login-visual-kicker">Holiday childcare</p>
+            <h2>A link to the <em>email</em> on your account.</h2>
+            <p>We send the reset there. The link expires after a short time, then you choose a new password.</p>
+            <ul className="login-points">
+              <li>Email link</li>
+              <li>New password</li>
+              <li>Back to your bookings</li>
+            </ul>
           </div>
-        ) : (
-          <form className="auth-card" onSubmit={submit} autoComplete="on">
-            <div className="field">
-              <label htmlFor="forgot-email">Email</label>
-              <input
-                id="forgot-email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@email.com"
-              />
+        </aside>
+        <div className="login-panel">
+          {done ? (
+            <div className="auth-card">
+              <div className="login-heading">
+                <div className="eyebrow">Account</div>
+                <h1>Check your <em>email</em></h1>
+                <p>If an account exists for {email}, you&apos;ll get a link to choose a new password.</p>
+              </div>
+              <Link className="btn-submit" href="/login">Back to sign in</Link>
             </div>
-            {error && <p className="field-error-msg">{error}</p>}
-            <button className="btn-submit" type="submit" disabled={loading}>
-              {loading ? 'Sending…' : 'Send reset link'}
-            </button>
-            <p className="auth-switch"><Link href="/login">Back to sign in</Link></p>
-          </form>
-        )}
+          ) : (
+            <form className="auth-card" onSubmit={submit} autoComplete="on">
+              <div className="login-heading">
+                <div className="eyebrow">Account</div>
+                <h1>Reset your <em>password</em></h1>
+                <p>Enter the email on your VacayNanny account and we&apos;ll send a reset link.</p>
+              </div>
+              <div className="field">
+                <label htmlFor="forgot-email">Email</label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? 'forgot-error' : undefined}
+                />
+              </div>
+              {error && <p id="forgot-error" className="field-error-msg" role="alert">{error}</p>}
+              <button className="btn-submit" type="submit" disabled={loading}>
+                {loading ? 'Sending…' : 'Send reset link'}
+              </button>
+              <p className="auth-switch"><Link href="/login">Back to sign in</Link></p>
+            </form>
+          )}
+        </div>
       </div>
     </>
   )
