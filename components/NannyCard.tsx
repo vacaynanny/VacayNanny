@@ -22,7 +22,7 @@ export default function NannyCard({
         <Link href={`/nannies/${nanny.slug}`} className="nc-name" style={{ color: 'inherit', textDecoration: 'none' }}>
           {nanny.display_name}
         </Link>
-        <div className="nc-loc">📍 {[nanny.town, nanny.destinations.slice(0, 2).join(' · ')].filter(Boolean).join(' · ')}</div>
+        <div className="nc-loc">{[nanny.town, nanny.destinations.slice(0, 2).join(' · ')].filter(Boolean).join(' · ')}</div>
         <div className="nc-stars">
           <span>{'★'.repeat(Math.round(nanny.rating_avg || 5))}</span> ({nanny.review_count} reviews)
         </div>

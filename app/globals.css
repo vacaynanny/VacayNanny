@@ -170,11 +170,11 @@ footer.sec   { background:rgba(1,6,10,0.96); }
 .trust-strip-sep { color:rgba(255,255,255,0.18);font-size:1rem; }
 
 /* ── NANNIES ── */
-.nannies-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1.8rem;margin-top:3rem; }
+.nannies-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:1.25rem; }
 .nanny-card { border-radius:22px;overflow:hidden;background:rgba(255,255,255,0.056);border:1px solid rgba(255,255,255,0.1);transition:transform 0.3s,box-shadow 0.3s; }
-.nanny-card:hover { transform:translateY(-8px);box-shadow:0 28px 65px rgba(0,0,0,0.45); }
-.nc-photo { height:185px;overflow:hidden;position:relative; }
-.nc-photo img { width:100%;height:100%;object-fit:cover;object-position:top center;transition:transform 0.5s;display:block; }
+.nanny-card:hover { transform:translateY(-6px);box-shadow:0 28px 65px rgba(0,0,0,0.45); }
+.nc-photo { height:280px;overflow:hidden;position:relative;background:#10202b; }
+.nc-photo img { width:100%;height:100%;object-fit:cover;object-position:center 28%;transition:transform 0.5s;display:block; }
 .nanny-card:hover .nc-photo img { transform:scale(1.06); }
 .tier-pill { position:absolute;top:12px;right:12px;font-size:0.65rem;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.4px; }
 .t-elite { background:var(--gold);color:#fff; }
@@ -412,6 +412,10 @@ footer.sec   { background:rgba(1,6,10,0.96); }
 .page-hero h1 { font-family:var(--font-playfair), 'Playfair Display', serif;font-size:clamp(2.2rem,5vw,3.8rem);font-weight:900;line-height:1.08;margin-bottom:16px; }
 .page-hero h1 em { color:var(--coral);font-style:italic; }
 .page-hero p { font-size:1.1rem;color:var(--text-muted);max-width:580px;margin:0 auto 32px;line-height:1.65; }
+.browse-hero { padding:104px 5% 0; }
+.browse-hero p { margin-bottom:0; }
+.browse-results .search-box { margin-top:1.25rem; }
+.browse-results .browse-count { color:rgba(255,255,255,0.62); margin:1rem 0 0; font-size:0.92rem; }
 .tier-badges { display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px; }
 .tier-badge { display:flex;align-items:center;gap:8px;padding:8px 18px;border-radius:50px;font-size:0.85rem;font-weight:600; }
 .tier-badge.bronze { background:rgba(180,100,40,0.18);border:1px solid rgba(180,100,40,0.4);color:#d4854a; }

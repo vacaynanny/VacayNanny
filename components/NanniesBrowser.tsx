@@ -54,12 +54,12 @@ export default function NanniesBrowser({
 
   return (
     <PageShell>
-      <section className="page-hero">
+      <section className="page-hero browse-hero">
         <div className="eyebrow">Browse</div>
         <h1>Find your <em>VacayNanny</em></h1>
         <p>Filter by destination, dates, infant care, and certification. Every profile is ID-verified and reference-checked before it goes live.</p>
       </section>
-      <div className="sec-inner" style={{ paddingBottom: '4rem' }}>
+      <div className="sec-inner browse-results" style={{ paddingBottom: '4rem' }}>
         <div className="search-box nanny-search">
           <div className="sf">
             <label>Destination</label>
@@ -107,8 +107,8 @@ export default function NanniesBrowser({
           </div>
           <button className="search-go" onClick={apply}>Filter →</button>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.45)', margin: '1.2rem 0', fontSize: '0.9rem' }}>
-          {filtered.length} nann{filtered.length === 1 ? 'y' : 'ies'} available
+        <p className="browse-count">
+          {filtered.length} {filtered.length === 1 ? 'nanny' : 'nannies'} available
           {checkIn && checkOut ? ' on those dates' : ''}
           {infant ? ' with infant care' : ''}
         </p>
