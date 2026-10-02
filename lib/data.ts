@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { DESTINATION_IMAGES, withDestinationImage } from '@/lib/destinations'
 import { hasSupabaseConfig } from '@/lib/supabase'
 import { withTimeout } from '@/lib/withTimeout'
 import { filterNannies, type NannySearchFilters } from '@/lib/match'
@@ -181,15 +182,15 @@ export const FALLBACK_NANNIES: Nanny[] = [
 ]
 
 export const FALLBACK_DESTINATIONS: Destination[] = [
-  { id: 'd1', slug: 'diani-beach', name: 'Diani Beach', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 1 },
-  { id: 'd2', slug: 'malindi', name: 'Malindi', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 2 },
-  { id: 'd3', slug: 'watamu', name: 'Watamu', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1605640840605-14ac1855827b?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 3 },
-  { id: 'd4', slug: 'nairobi', name: 'Nairobi', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1611348524140-53c9a25263d6?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 4 },
-  { id: 'd5', slug: 'mombasa', name: 'Mombasa', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 5 },
-  { id: 'd6', slug: 'lamu', name: 'Lamu', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 6 },
-  { id: 'd7', slug: 'masai-mara', name: 'Masai Mara', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 7 },
-  { id: 'd8', slug: 'amboseli', name: 'Amboseli', country: 'Kenya', image_url: 'https://images.unsplash.com/photo-1489749798305-4fea3ae63d43?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 8 },
-  { id: 'd9', slug: 'zanzibar', name: 'Zanzibar', country: 'Tanzania', image_url: 'https://images.unsplash.com/photo-1559827291-72ee739d0d9a?w=800&auto=format&fit=crop', description: null, is_active: true, sort_order: 9 },
+  { id: 'd1', slug: 'diani-beach', name: 'Diani Beach', country: 'Kenya', image_url: DESTINATION_IMAGES['diani-beach'], description: null, is_active: true, sort_order: 1 },
+  { id: 'd2', slug: 'malindi', name: 'Malindi', country: 'Kenya', image_url: DESTINATION_IMAGES.malindi, description: null, is_active: true, sort_order: 2 },
+  { id: 'd3', slug: 'watamu', name: 'Watamu', country: 'Kenya', image_url: DESTINATION_IMAGES.watamu, description: null, is_active: true, sort_order: 3 },
+  { id: 'd4', slug: 'nairobi', name: 'Nairobi', country: 'Kenya', image_url: DESTINATION_IMAGES.nairobi, description: null, is_active: true, sort_order: 4 },
+  { id: 'd5', slug: 'mombasa', name: 'Mombasa', country: 'Kenya', image_url: DESTINATION_IMAGES.mombasa, description: null, is_active: true, sort_order: 5 },
+  { id: 'd6', slug: 'lamu', name: 'Lamu', country: 'Kenya', image_url: DESTINATION_IMAGES.lamu, description: null, is_active: true, sort_order: 6 },
+  { id: 'd7', slug: 'masai-mara', name: 'Masai Mara', country: 'Kenya', image_url: DESTINATION_IMAGES['masai-mara'], description: null, is_active: true, sort_order: 7 },
+  { id: 'd8', slug: 'amboseli', name: 'Amboseli', country: 'Kenya', image_url: DESTINATION_IMAGES.amboseli, description: null, is_active: true, sort_order: 8 },
+  { id: 'd9', slug: 'zanzibar', name: 'Zanzibar', country: 'Tanzania', image_url: DESTINATION_IMAGES.zanzibar, description: null, is_active: true, sort_order: 9 },
 ]
 
 export const FALLBACK_REVIEWS: Review[] = [
@@ -274,7 +275,7 @@ export async function getDestinations(): Promise<Destination[]> {
           .eq('is_active', true)
           .order('sort_order')
         if (error) return FALLBACK_DESTINATIONS
-        return (data || []) as Destination[]
+        return ((data || []) as Destination[]).map(withDestinationImage)
       } catch {
         return FALLBACK_DESTINATIONS
       }

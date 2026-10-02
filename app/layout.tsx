@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: 'VacayNanny — Premium Holiday Childcare',
   description: 'Professional, vetted nannies for your family vacations in Kenya and beyond.',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/favicon.svg' }],
+  },
 }
 
 export default function RootLayout({

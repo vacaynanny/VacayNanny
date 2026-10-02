@@ -221,22 +221,21 @@ export default function HomePage({
               <div><div className="stat-num">100%</div><div className="stat-lbl">Vetted &amp; Insured</div></div>
             </div>
           </div>
-        </section>
-
-        <div className="trust-strip">
-          <span className="trust-strip-label">Why families trust us</span>
-          <div className="trust-strip-items">
-            <span className="trust-strip-item">Police-Cleared Nannies</span>
-            <span className="trust-strip-sep">·</span>
-            <span className="trust-strip-item">Paediatric First Aid</span>
-            <span className="trust-strip-sep">·</span>
-            <span className="trust-strip-item">2-Hour Replacement Guarantee</span>
-            <span className="trust-strip-sep">·</span>
-            <span className="trust-strip-item">Insured & Bonded</span>
-            <span className="trust-strip-sep">·</span>
-            <span className="trust-strip-item">Multilingual Carers</span>
+          <div className="trust-strip">
+            <span className="trust-strip-label">Why families trust us</span>
+            <div className="trust-strip-items">
+              <span className="trust-strip-item">Police-Cleared Nannies</span>
+              <span className="trust-strip-sep">·</span>
+              <span className="trust-strip-item">Paediatric First Aid</span>
+              <span className="trust-strip-sep">·</span>
+              <span className="trust-strip-item">2-Hour Replacement Guarantee</span>
+              <span className="trust-strip-sep">·</span>
+              <span className="trust-strip-item">Insured & Bonded</span>
+              <span className="trust-strip-sep">·</span>
+              <span className="trust-strip-item">Multilingual Carers</span>
+            </div>
           </div>
-        </div>
+        </section>
 
         <section className="sec sec-search" id="search">
           <div className="sec-inner">
@@ -318,25 +317,26 @@ export default function HomePage({
         <section className="sec sec-life">
           <div className="sec-inner">
             <div className="reveal">
-              <div className="sec-label">The VacayNanny Life</div>
-              <h2 className="sec-title">Moments You <em>Deserve</em></h2>
-              <p className="sec-sub">While your children are safe and happy, you get to live the holiday you imagined.</p>
+              <div className="sec-label">What We Take Care Of</div>
+              <h2 className="sec-title">What Your Nanny <em>Handles</em></h2>
+              <p className="sec-sub">From bedtime routines and beach days to hotel care and day-trip support. Your nanny covers it so you can be present.</p>
             </div>
             <div className="life-grid reveal">
               <div className="life-tile big">
-                <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop" alt="Beach sunset" />
-                <div className="life-shade" /><div className="life-info"><div className="life-title">Sunset Strolls</div><div className="life-sub">Diani Beach, Kenya</div></div>
-                <div className="life-tag">Popular</div>
+                <img src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80" alt="Kids having fun at the beach with a nanny" />
+                <div className="life-shade" /><div className="life-info"><div className="life-title">Beach days sorted</div><div className="life-sub">Nanny leads the adventure, parents breathe</div></div>
+                <div className="life-tag">With Nanny</div>
               </div>
               {[
-                ['https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=600&auto=format&fit=crop', 'Spa', 'Spa & Wellness', 'Full day, uninterrupted'],
-                ['https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=600&auto=format&fit=crop', 'Fine dining', 'Fine Dining', 'Table for two, finally'],
-                ['https://images.unsplash.com/photo-1516426122078-c23e76319801?w=600&auto=format&fit=crop', 'Safari', 'Safari Adventure', 'Masai Mara awaits'],
-                ['https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&auto=format&fit=crop', 'Water sports', 'Water Sports', 'Kitesurfing, diving & more'],
-              ].map(([src, alt, title, sub]) => (
+                ['https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=900&auto=format&fit=crop&q=80', 'Couple at a dinner table', 'Romantic dinner', 'Just the two of you', 'Parent Freedom'],
+                ['https://images.unsplash.com/photo-1551966775-a4ddc8df052b?w=900&auto=format&fit=crop&q=80', 'Kids colouring and painting', 'Art time', 'Creativity on the sand', 'With Nanny'],
+                ['https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=900&auto=format&fit=crop&q=80', 'Parents relaxing while children are cared for', 'Time to yourself', 'While your nanny has it covered', 'Parent Freedom'],
+                ['https://images.unsplash.com/photo-1519046904884-53103b34b206?w=900&auto=format&fit=crop&q=80', 'Kids at a resort pool', 'Pool fun', 'Safe, supervised, smiling', 'With Nanny'],
+              ].map(([src, alt, title, sub, tag]) => (
                 <div className="life-tile" key={title}>
                   <img src={src} alt={alt} />
                   <div className="life-shade" /><div className="life-info"><div className="life-title">{title}</div><div className="life-sub">{sub}</div></div>
+                  <div className="life-tag">{tag}</div>
                 </div>
               ))}
             </div>
