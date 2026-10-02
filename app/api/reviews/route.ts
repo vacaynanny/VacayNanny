@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentProfile } from '@/lib/auth'
+import { getCurrentProfile, profileOwnsBooking } from '@/lib/auth'
 import { jsonFromBookingError, loadBooking } from '@/lib/booking-ops'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 
@@ -30,9 +30,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
     const booking = await loadBooking(supabase, bookingId)
 
-    const isParent =
-      booking.parent_id === profile.id ||
-      Boolean(profile.email && booking.email.toLowerCase() === profile.email.toLowerCase())
+    const isParent = profileOwnsBooking(profile, booking)
     if (!isParent && profile.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

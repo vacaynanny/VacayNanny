@@ -6,6 +6,40 @@ import { redirect } from 'next/navigation'
 
 const AUTH_MS = 2000
 
+export type CurrentProfile = Profile & { emailConfirmed: boolean }
+
+type AuthIdentity = {
+  id: string
+  email?: string | null
+  email_confirmed_at?: string | null
+  confirmation_sent_at?: string | null
+  created_at: string
+  app_metadata?: { provider?: string }
+  user_metadata?: { full_name?: string }
+}
+
+/**
+ * Email/password accounts only count as verified after Supabase has sent a
+ * confirmation message and the user has confirmed it. When confirmation is
+ * turned off, Supabase marks the email confirmed immediately and never sends
+ * that message, so a new account must not inherit guest bookings.
+ */
+export function emailOwnershipProven(user: AuthIdentity): boolean {
+  if (!user.email || !user.email_confirmed_at) return false
+  const provider = user.app_metadata?.provider
+  if (typeof provider === 'string' && provider !== 'email') return true
+  return Boolean(user.confirmation_sent_at)
+}
+
+export function profileOwnsBooking(
+  profile: { id: string; email: string | null; emailConfirmed: boolean },
+  booking: { parent_id: string | null; email: string | null },
+): boolean {
+  if (booking.parent_id && booking.parent_id === profile.id) return true
+  if (!profile.emailConfirmed || !profile.email || !booking.email) return false
+  return booking.email.toLowerCase() === profile.email.toLowerCase()
+}
+
 export async function getSessionUser() {
   if (!hasSupabaseConfig()) return null
   return withTimeout(
@@ -23,7 +57,7 @@ export async function getSessionUser() {
   )
 }
 
-export async function getCurrentProfile(): Promise<Profile | null> {
+export async function getCurrentProfile(): Promise<CurrentProfile | null> {
   if (!hasSupabaseConfig()) return null
   return withTimeout(
     (async () => {
@@ -31,16 +65,18 @@ export async function getCurrentProfile(): Promise<Profile | null> {
         const supabase = await createSupabaseServer()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return null
+        const identity = user as AuthIdentity
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
-        return (data as Profile | null) ?? {
-          id: user.id,
+        const profile: Profile = (data as Profile | null) ?? {
+          id: identity.id,
           role: 'parent' as const,
-          full_name: user.user_metadata?.full_name || '',
-          email: user.email ?? null,
+          full_name: identity.user_metadata?.full_name || '',
+          email: identity.email ?? null,
           phone: null,
           avatar_url: null,
-          created_at: user.created_at,
+          created_at: identity.created_at,
         }
+        return { ...profile, emailConfirmed: emailOwnershipProven(identity) }
       } catch {
         return null
       }

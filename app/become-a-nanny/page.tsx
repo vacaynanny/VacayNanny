@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { APPLICATION_FILE_MAX_BYTES } from '@/lib/application-files'
 import { APPLY_EXTRA_DESTINATIONS, mergeDestinationChoices } from '@/lib/destinations'
 import { useDestinationNames } from '@/lib/useDestinationNames'
 
@@ -117,7 +118,7 @@ function PhoneInput({
 function UploadBox({
   label, hint, name, onFile,
 }: {
-  label: string; hint?: string; name: string; onFile: (name: string, file: File | null) => void;
+  label: string; hint?: string; name: string;   onFile: (name: string, file: File | null) => boolean | void;
 }) {
   const [filename, setFilename] = useState('')
   return (
@@ -127,8 +128,19 @@ function UploadBox({
         accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*"
         onChange={e => {
           const file = e.target.files?.[0] || null
+          if (file && file.size > APPLICATION_FILE_MAX_BYTES) {
+            e.currentTarget.value = ''
+            setFilename('')
+            onFile(name, file)
+            return
+          }
+          const accepted = onFile(name, file)
+          if (accepted === false) {
+            e.currentTarget.value = ''
+            setFilename('')
+            return
+          }
           setFilename(file?.name || '')
-          onFile(name, file)
         }}
       />
       <div className="upload-icon">{filename ? '✅' : '📁'}</div>
@@ -244,6 +256,17 @@ export default function BecomeANanny() {
   }
 
   function handleUpload(name: string, file: File | null) {
+    if (file && file.size > APPLICATION_FILE_MAX_BYTES) {
+      setErrors(['Each file must be 5 MB or smaller.'])
+      setUploads(u => ({ ...u, [name]: false }))
+      setFiles(f => {
+        const next = { ...f }
+        delete next[name]
+        return next
+      })
+      return false
+    }
+    if (file) setErrors([])
     setUploads(u => ({ ...u, [name]: !!file }))
     setFiles(f => {
       const next = { ...f }
@@ -251,6 +274,7 @@ export default function BecomeANanny() {
       else delete next[name]
       return next
     })
+    return true
   }
 
   // ── Validate each step ──
@@ -374,12 +398,13 @@ export default function BecomeANanny() {
         fd.append(map[key] || key, file)
       })
       const res = await fetch('/api/apply', { method: 'POST', body: fd })
+      const data = await res.json().catch(() => null)
       if (res.ok) {
         setSubmitted(true)
         sessionStorage.removeItem('vn_nanny_form')
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
-        setErrors(['Submission failed. Please try again.'])
+        setErrors([data?.error || 'Submission failed. Please try again.'])
       }
     } catch {
       setErrors(['Network error. Please check your connection.'])

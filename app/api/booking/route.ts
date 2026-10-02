@@ -4,6 +4,7 @@ import { notifyBookingEvent, sendBookingEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
 import { careTypeLabel, parseCareType, quoteBooking } from '@/lib/booking'
 import { findNannyClashes, jsonFromBookingError, nannyContact, suggestMatch } from '@/lib/booking-ops'
+import { limitRoute } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createServerClient()
+    const blocked = await limitRoute(request, supabase, 'booking', { email })
+    if (blocked) return blocked
 
     let dailyRateKes: number | null = null
     let nannyName: string | null = null

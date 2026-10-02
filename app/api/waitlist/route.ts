@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
+import { limitRoute } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Waitlist is not configured yet.' }, { status: 503 })
     }
     const supabase = createServerClient()
+    const blocked = await limitRoute(request, supabase, 'waitlist', { email })
+    if (blocked) return blocked
     const { error } = await supabase.from('waitlist').insert([{ email, region: region || null }])
     if (error) {
       if (error.code === '23505') return NextResponse.json({ success: true, already: true })

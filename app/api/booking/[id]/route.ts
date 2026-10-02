@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentProfile } from '@/lib/auth'
+import { getCurrentProfile, profileOwnsBooking } from '@/lib/auth'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { applyBookingMutation, jsonFromBookingError, loadBooking } from '@/lib/booking-ops'
 
@@ -19,9 +19,7 @@ export async function PATCH(
     const supabase = createServerClient()
     const booking = await loadBooking(supabase, id)
 
-    const isParent =
-      booking.parent_id === profile.id ||
-      (profile.email && booking.email.toLowerCase() === profile.email.toLowerCase())
+    const isParent = profileOwnsBooking(profile, booking)
     const { data: nannyRow } = await supabase
       .from('nannies')
       .select('id')

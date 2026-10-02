@@ -12,6 +12,7 @@ import {
   careTypeLabel,
 } from '@/lib/booking'
 import { notifyBookingEvent, type BookingEmailEvent } from '@/lib/email'
+import { profileOwnsBooking } from '@/lib/auth'
 import { waDigits } from '@/lib/constants'
 import { bestAvailableMatch, matchRequestFromBooking, type ClashRow } from '@/lib/match'
 import type { Booking, BookingMessageRole, BookingStatus, CareType, Nanny, Profile } from '@/lib/types'
@@ -462,12 +463,10 @@ export async function applyBookingMutation(
 
 export async function resolveBookingAccess(
   supabase: SupabaseClient,
-  profile: Profile,
+  profile: Profile & { emailConfirmed: boolean },
   booking: Booking,
 ): Promise<{ isParent: boolean; isAssignedNanny: boolean; isAdmin: boolean; senderRole: BookingMessageRole | null }> {
-  const isParent =
-    booking.parent_id === profile.id ||
-    Boolean(profile.email && booking.email.toLowerCase() === profile.email.toLowerCase())
+  const isParent = profileOwnsBooking(profile, booking)
   const { data: nannyRow } = await supabase
     .from('nannies')
     .select('id')

@@ -3,16 +3,13 @@ import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { sendApplicationEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
 import { slugify } from '@/lib/constants'
-import type { DocumentKind, NannyTier } from '@/lib/types'
-
-const FILE_FIELDS: { form: string; kind: DocumentKind }[] = [
-  { form: 'photo', kind: 'photo' },
-  { form: 'id_front', kind: 'id_front' },
-  { form: 'id_back', kind: 'id_back' },
-  { form: 'selfie', kind: 'selfie' },
-  { form: 'cogc', kind: 'cogc' },
-  { form: 'passport', kind: 'passport' },
-]
+import {
+  APPLICATION_REQUEST_MAX_BYTES,
+  collectApplicationFiles,
+  prepareApplicationFiles,
+} from '@/lib/application-files'
+import { limitRoute } from '@/lib/rate-limit'
+import type { NannyTier } from '@/lib/types'
 
 function estimateTier(body: Record<string, unknown>): NannyTier {
   const years = parseInt(String(body.experienceYears || '0'), 10) || 0
@@ -25,24 +22,17 @@ function estimateTier(body: Record<string, unknown>): NannyTier {
   return 'bronze'
 }
 
-async function parseBody(request: NextRequest): Promise<{ payload: Record<string, unknown>; files: Map<string, File> }> {
+async function parseBody(request: NextRequest): Promise<{ payload: Record<string, unknown>; files: Map<string, File> } | { error: string }> {
   const contentType = request.headers.get('content-type') || ''
-  const files = new Map<string, File>()
   if (contentType.includes('multipart/form-data')) {
     const form = await request.formData()
     const raw = form.get('payload')
     const payload = raw ? JSON.parse(String(raw)) : {}
-    for (const [key, value] of form.entries()) {
-      if (key === 'payload') continue
-      if (value instanceof File && value.size > 0) files.set(key, value)
-    }
-    const extraCerts = form.getAll('certificate')
-    extraCerts.forEach((v, i) => {
-      if (v instanceof File && v.size > 0) files.set(`certificate_${i}`, v)
-    })
+    const files = collectApplicationFiles(form)
+    if ('error' in files) return files
     return { payload, files }
   }
-  return { payload: await request.json(), files }
+  return { payload: await request.json(), files: new Map() }
 }
 
 export async function POST(request: NextRequest) {
@@ -51,12 +41,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Application storage is not configured yet.' }, { status: 503 })
     }
 
-    const { payload: body, files } = await parseBody(request)
+    const contentLength = Number(request.headers.get('content-length') || 0)
+    if (contentLength > APPLICATION_REQUEST_MAX_BYTES) {
+      return NextResponse.json({ error: 'Uploads are too large. Each file must be 5 MB or smaller.' }, { status: 413 })
+    }
+
+    const supabase = createServerClient()
+    const blocked = await limitRoute(request, supabase, 'apply')
+    if (blocked) return blocked
+
+    const parsed = await parseBody(request)
+    if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
+    const { payload: body, files } = parsed
     const fullName = String(body.fullName || '').trim()
     const email = String(body.email || '').trim()
     if (!fullName || !email) {
       return NextResponse.json({ error: 'Name and email are required.' }, { status: 400 })
     }
+
+    const emailBlocked = await limitRoute(request, supabase, 'apply', { email, skipIp: true })
+    if (emailBlocked) return emailBlocked
+
+    const prepared = await prepareApplicationFiles(files)
+    if ('error' in prepared) return NextResponse.json({ error: prepared.error }, { status: 400 })
 
     let userId: string | null = null
     try {
@@ -66,7 +73,6 @@ export async function POST(request: NextRequest) {
     } catch {}
 
     const estimated = estimateTier(body)
-    const supabase = createServerClient()
 
     const { data: application, error } = await supabase.from('nanny_applications').insert([{
       user_id: userId,
@@ -142,26 +148,23 @@ export async function POST(request: NextRequest) {
       if (refErr) console.error('Reference insert error:', refErr)
     }
 
-    for (const [key, file] of files) {
-      const mapped = FILE_FIELDS.find(f => f.form === key)
-      const kind: DocumentKind = mapped?.kind || (key.startsWith('certificate') ? 'certificate' : 'certificate')
-      const bucket = kind === 'photo' ? 'nanny-photos' : 'nanny-documents'
-      const path = `${application.id}/${kind}-${slugify(file.name) || 'file'}`
-      const buf = Buffer.from(await file.arrayBuffer())
-      const { error: upErr } = await supabase.storage.from(bucket).upload(path, buf, {
-        contentType: file.type || 'application/octet-stream',
+    for (const file of prepared.files) {
+      const bucket = file.kind === 'photo' ? 'nanny-photos' : 'nanny-documents'
+      const path = `${application.id}/${file.kind}-${slugify(file.fileName) || 'file'}`
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file.buffer, {
+        contentType: file.contentType,
         upsert: true,
       })
       if (upErr) {
-        console.error('Upload error', key, upErr)
+        console.error('Upload error', file.kind, upErr)
         continue
       }
       await supabase.from('nanny_documents').insert([{
         application_id: application.id,
-        kind,
+        kind: file.kind,
         storage_path: `${bucket}/${path}`,
-        file_name: file.name,
-        mime_type: file.type,
+        file_name: file.fileName,
+        mime_type: file.contentType,
       }])
     }
 

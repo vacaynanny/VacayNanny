@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import { Resend } from 'resend'
 import { ADMIN_EMAIL } from '@/lib/constants'
+import { limitRoute } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Contact inbox is not configured yet.' }, { status: 503 })
     }
     const supabase = createServerClient()
+    const blocked = await limitRoute(request, supabase, 'contact', { email })
+    if (blocked) return blocked
     const { error } = await supabase.from('contact_messages').insert([{ name, email, subject, message }])
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
