@@ -17,9 +17,22 @@ export async function GET(request: Request) {
   const type = searchParams.get('type') as EmailOtpType | null
   const next = safeNext(searchParams.get('next'))
   const authError = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
 
+  // Handle auth errors with user-friendly messages
   if (authError) {
-    return NextResponse.redirect(`${SITE_URL}/forgot-password?error=invalid`)
+    const errorParams = new URLSearchParams()
+    if (authError === 'access_denied' || authError === 'expired_token' || authError === 'invalid_token') {
+      errorParams.set('error', 'expired')
+      errorParams.set('message', 'This confirmation link has expired or is invalid. Please request a new one.')
+    } else if (authError === 'email_not_confirmed') {
+      errorParams.set('error', 'unconfirmed')
+      errorParams.set('message', 'Please confirm your email address first.')
+    } else {
+      errorParams.set('error', 'invalid')
+      errorParams.set('message', 'Something went wrong. Please try again.')
+    }
+    return NextResponse.redirect(`${SITE_URL}/login?${errorParams.toString()}`)
   }
 
   const supabase = await createSupabaseServer()
@@ -27,12 +40,23 @@ export async function GET(request: Request) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (error) {
-      return NextResponse.redirect(`${SITE_URL}/forgot-password?error=invalid`)
+      const errorParams = new URLSearchParams()
+      if (error.message.includes('expired') || error.message.includes('invalid')) {
+        errorParams.set('error', 'expired')
+        errorParams.set('message', 'This confirmation link has expired. Please request a new one from the sign-up page.')
+      } else {
+        errorParams.set('error', 'invalid')
+        errorParams.set('message', 'We couldn\'t confirm your email. Please try again or request a new link.')
+      }
+      return NextResponse.redirect(`${SITE_URL}/login?${errorParams.toString()}`)
     }
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
     if (error) {
-      return NextResponse.redirect(`${SITE_URL}/forgot-password?error=invalid`)
+      const errorParams = new URLSearchParams()
+      errorParams.set('error', 'invalid')
+      errorParams.set('message', 'This link is invalid or has expired. Please request a new one.')
+      return NextResponse.redirect(`${SITE_URL}/login?${errorParams.toString()}`)
     }
   }
 

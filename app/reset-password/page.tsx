@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
+import { getFriendlyAuthError } from '@/lib/auth-errors'
 import Nav from '@/components/Nav'
 
 export default function ResetPasswordPage() {
@@ -53,7 +54,7 @@ export default function ResetPasswordPage() {
     const { error: err } = await supabase.auth.updateUser({ password })
     if (err) {
       setLoading(false)
-      setError(err.message)
+      setError(getFriendlyAuthError(err))
       return
     }
     const { data: { user } } = await supabase.auth.getUser()

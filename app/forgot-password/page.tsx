@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
 import { SITE_URL } from '@/lib/constants'
+import { getFriendlyAuthError } from '@/lib/auth-errors'
 import Nav from '@/components/Nav'
 
 function ForgotPasswordForm() {
@@ -29,7 +30,7 @@ function ForgotPasswordForm() {
       redirectTo: `${SITE_URL}/auth/callback?next=/reset-password`,
     })
     setLoading(false)
-    if (err) { setError(err.message); return }
+    if (err) { setError(getFriendlyAuthError(err)); return }
     setDone(true)
   }
 

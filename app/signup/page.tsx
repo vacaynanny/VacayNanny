@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
 import { SITE_URL } from '@/lib/constants'
+import { getFriendlyAuthError } from '@/lib/auth-errors'
 import Nav from '@/components/Nav'
 
 type SignupRole = 'parent' | 'nanny'
@@ -20,6 +21,8 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendMessage, setResendMessage] = useState('')
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,13 +42,35 @@ export default function SignupPage() {
       },
     })
     setLoading(false)
-    if (err) { setError(err.message); return }
+    if (err) { setError(getFriendlyAuthError(err)); return }
     if (data.session) {
       router.push(role === 'nanny' ? '/become-a-nanny' : '/account')
       router.refresh()
       return
     }
     setDone(true)
+  }
+
+  async function resendConfirmation() {
+    setResending(true)
+    setResendMessage('')
+    if (!hasSupabaseConfig()) {
+      setResendMessage('Auth is not configured.')
+      setResending(false)
+      return
+    }
+    const supabase = createSupabaseBrowser()
+    const { error: err } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${SITE_URL}/auth/callback` },
+    })
+    setResending(false)
+    if (err) {
+      setResendMessage(getFriendlyAuthError(err))
+    } else {
+      setResendMessage('A new confirmation link has been sent to your email.')
+    }
   }
 
   return (
@@ -71,8 +96,14 @@ export default function SignupPage() {
                 <div className="eyebrow">Account</div>
                 <h1>Check your <em>email</em></h1>
                 <p>We sent a confirmation link to {email}. Open it, then sign in.</p>
+                {resendMessage && <p className="field-hint" style={{ marginTop: 12, color: resendMessage.includes('sent') ? '#5ec9b6' : '#ff8a8a' }}>{resendMessage}</p>}
               </div>
-              <Link className="btn-submit" href="/login">Go to sign in</Link>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+                <Link className="btn-submit" href="/login">Go to sign in</Link>
+                <button className="btn-ghost" onClick={resendConfirmation} disabled={resending} style={{ width: '100%' }}>
+                  {resending ? 'Sending…' : 'Resend confirmation email'}
+                </button>
+              </div>
             </div>
           ) : (
             <form className="auth-card" onSubmit={submit} autoComplete="on">

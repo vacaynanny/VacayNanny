@@ -144,18 +144,50 @@ export default function HomePage({
   const [pricingHover, setPricingHover] = useState(false)
   const [search, setSearch] = useState({ destination: '', checkIn: '', checkOut: '', tier: '', infant: '', cert: '' })
 
+  // Robust reveal observer with fallback timeout
   useEffect(() => {
-    const els = document.querySelectorAll('.reveal')
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('in')
-          obs.unobserve(e.target)
-        }
-      })
-    }, { threshold: 0.12 })
-    els.forEach(el => obs.observe(el))
-    return () => obs.disconnect()
+    let obs: IntersectionObserver | null = null
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null
+
+    function initObserver() {
+      const els = document.querySelectorAll('.reveal:not(.in)')
+      if (!els.length) return
+
+      obs = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('in')
+            obs?.unobserve(e.target)
+          }
+        })
+      }, { threshold: 0.05, rootMargin: '50px' }) // Lower threshold, earlier trigger
+
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      els.forEach(el => obs.observe(el))
+
+      // Fallback: reveal all after 3s in case observer fails (e.g. reduced motion, Safari quirks)
+      fallbackTimer = setTimeout(() => {
+        document.querySelectorAll('.reveal:not(.in)').forEach(el => el.classList.add('in'))
+      }, 3000)
+    }
+
+    // Initial run
+    initObserver()
+
+    // Re-run on scroll/resize in case new elements appear (e.g. after data loads)
+    const onScroll = () => initObserver()
+    const onResize = () => initObserver()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onResize, { passive: true })
+
+    return () => {
+      obs?.disconnect()
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      fallbackTimer && clearTimeout(fallbackTimer)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onResize)
+    }
   }, [])
 
   function openBook(defaults?: BookingDefaults) {
@@ -307,6 +339,7 @@ export default function HomePage({
                 <div className="process-step" key={title}>
                   <div className="process-step-label">{label}</div>
                   <div className="process-step-title">{title}</div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt={alt} className="process-phone-image" />
                 </div>,
               ])}
@@ -323,6 +356,7 @@ export default function HomePage({
             </div>
             <div className="life-grid reveal">
               <div className="life-tile big">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80" alt="Kids having fun at the beach with a nanny" />
                 <div className="life-shade" /><div className="life-info"><div className="life-title">Beach days sorted</div><div className="life-sub">Nanny leads the adventure, parents breathe</div></div>
                 <div className="life-tag">With Nanny</div>
@@ -334,6 +368,7 @@ export default function HomePage({
                 ['https://images.unsplash.com/photo-1519046904884-53103b34b206?w=900&auto=format&fit=crop&q=80', 'Kids at a resort pool', 'Pool fun', 'Safe, supervised, smiling', 'With Nanny'],
               ].map(([src, alt, title, sub, tag]) => (
                 <div className="life-tile" key={title}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src} alt={alt} />
                   <div className="life-shade" /><div className="life-info"><div className="life-title">{title}</div><div className="life-sub">{sub}</div></div>
                   <div className="life-tag">{tag}</div>
@@ -450,6 +485,7 @@ export default function HomePage({
                   <p className="testi-text">{t.body}</p>
                   <div className="testi-author">
                     <div className="testi-av">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={t.avatar_url || '/images/top-right.png'} alt={t.parent_name} />
                     </div>
                     <div>
@@ -491,20 +527,6 @@ export default function HomePage({
           </div>
         </section>
 
-        <section className="sec sec-partners">
-          <div className="sec-inner">
-            <div className="reveal" style={{ textAlign: 'center' }}>
-              <div className="sec-label">Trusted By</div>
-              <h2 className="sec-title">Our <em>Partners</em></h2>
-            </div>
-            <div className="partners-row reveal">
-              {['Sarova Hotels', 'Leopard Beach Resort', 'Fairmont The Norfolk', 'Hemingways', 'Elewana Collection', 'Sun & Sand Resorts'].map(p => (
-                <div className="partner-pill" key={p}>{p}</div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="sec" style={{ background: 'rgba(26,46,53,0.85)', textAlign: 'center' }}>
           <div className="sec-inner reveal">
             <div className="sec-label">Join Our Team</div>
@@ -525,7 +547,6 @@ export default function HomePage({
               <p>Your perfect holiday is one nanny away. Book in minutes, enjoy it for days.</p>
               <div className="cta-btns">
                 <button className="btn-white" onClick={() => openBook()}>Book a Nanny Today</button>
-                <Link href="/become-a-nanny" className="btn-ghost-w">Become a Nanny</Link>
               </div>
             </div>
           </div>

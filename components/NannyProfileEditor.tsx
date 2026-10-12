@@ -6,6 +6,9 @@ import { DAYS_OF_WEEK, formatKes, tierLabel } from '@/lib/constants'
 import { mergeDestinationChoices } from '@/lib/destinations'
 import type { Nanny } from '@/lib/types'
 
+const MAX_PHOTO_SIZE = 4 * 1024 * 1024 // 4 MB
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 function Chip({
   label,
   checked,
@@ -50,15 +53,38 @@ export default function NannyProfileEditor({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [fileError, setFileError] = useState('')
 
   function toggle(list: string[], value: string, setList: (next: string[]) => void) {
     setList(list.includes(value) ? list.filter(item => item !== value) : [...list, value])
   }
 
+  function validateFile(file: File): string | null {
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      return 'Please upload a JPG, PNG, or WebP image.'
+    }
+    if (file.size > MAX_PHOTO_SIZE) {
+      return 'File is too large. Maximum size is 4 MB.'
+    }
+    return null
+  }
+
   function onFile(next: File | null) {
-    setFile(next)
-    setRemovePhoto(false)
-    if (next) setPreview(URL.createObjectURL(next))
+    setFileError('')
+    if (next) {
+      const err = validateFile(next)
+      if (err) {
+        setFileError(err)
+        return
+      }
+      setFile(next)
+      setRemovePhoto(false)
+      setPreview(URL.createObjectURL(next))
+    } else {
+      setFile(null)
+      setRemovePhoto(false)
+      setPreview(nanny.photo_url || '')
+    }
   }
 
   async function submit(e: React.FormEvent) {
@@ -104,25 +130,28 @@ export default function NannyProfileEditor({
             ? <img src={preview} alt="" />
             : <span>{nanny.display_name.slice(0, 2).toUpperCase()}</span>}
         </div>
-        <div>
-          <label className="upload-box" style={{ marginBottom: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <label className="upload-box" style={{ marginBottom: 8, display: 'block' }}>
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={e => onFile(e.target.files?.[0] || null)}
+              disabled={busy}
             />
             <p>{file ? file.name : 'Replace photo'}</p>
             <span>JPG, PNG or WebP · up to 4 MB</span>
           </label>
+          {fileError && <p className="field-error-msg" style={{ marginTop: 8 }}>{fileError}</p>}
           {(preview || nanny.photo_url) && !removePhoto && (
             <button
               type="button"
               className="btn-ghost"
-              style={{ padding: '8px 14px', fontSize: '0.8rem' }}
+              style={{ padding: '8px 14px', fontSize: '0.8rem', marginTop: 8 }}
               onClick={() => {
                 setFile(null)
                 setPreview('')
                 setRemovePhoto(true)
+                setFileError('')
               }}
             >
               Remove photo

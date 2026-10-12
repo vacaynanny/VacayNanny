@@ -1,21 +1,34 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
+import { getFriendlyAuthError } from '@/lib/auth-errors'
 import Nav from '@/components/Nav'
 
 function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const next = params.get('next') || '/account'
+  const callbackError = params.get('error')
+  const callbackMessage = params.get('message')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(callbackMessage || '')
   const [loading, setLoading] = useState(false)
+
+  // Clear URL params after reading to avoid showing on refresh
+  useEffect(() => {
+    if (callbackError || callbackMessage) {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('error')
+      url.searchParams.delete('message')
+      window.history.replaceState({}, '', url)
+    }
+  }, [callbackError, callbackMessage])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -28,7 +41,7 @@ function LoginForm() {
     const supabase = createSupabaseBrowser()
     const { error: err } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (err) { setError(err.message); return }
+    if (err) { setError(getFriendlyAuthError(err)); return }
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
