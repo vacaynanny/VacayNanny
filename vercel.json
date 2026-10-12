@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/bookings",
-      "schedule": "10 * * * *"
+      "schedule": "30 21 * * *"
     }
   ],
   "git": {
