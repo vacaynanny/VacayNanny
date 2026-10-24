@@ -23,6 +23,17 @@ export type Profile = {
   created_at: string
 }
 
+export type RegisteredAccount = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  role: UserRole
+  hasProfile: boolean
+  registeredAt: string
+  lastSignInAt: string | null
+}
+
 export type Destination = {
   id: string
   slug: string
