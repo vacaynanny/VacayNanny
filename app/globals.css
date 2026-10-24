@@ -877,3 +877,228 @@ button.check-item { width:100%; text-align:left; font:inherit; color:inherit; }
 .safeguard-q legend { font-size:0.95rem; color:#fff; margin-bottom:10px; line-height:1.45; }
 .safeguard-q label { display:flex; gap:10px; align-items:flex-start; margin-bottom:8px; color:rgba(255,255,255,0.72); font-size:0.88rem; line-height:1.45; cursor:pointer; }
 .safeguard-q input { margin-top:3px; }
+
+.account-page {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 112px 5% 88px;
+}
+.account-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 8px 0 28px;
+  background: radial-gradient(ellipse 70% 120% at 0% 0%, rgba(232,113,74,0.16), transparent 62%);
+}
+.account-identity { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.account-avatar {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.16), transparent 42%),
+    linear-gradient(160deg, rgba(232,113,74,0.45), rgba(45,125,111,0.45));
+  border: 1px solid rgba(255,255,255,0.16);
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+.account-avatar-img { object-fit: cover; }
+.account-kicker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--coral);
+  margin-bottom: 6px;
+}
+.account-hero h1 {
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-weight: 900;
+  line-height: 1.05;
+}
+.account-hero h1 em { color: var(--coral); font-style: italic; }
+.account-meta {
+  margin-top: 8px;
+  color: rgba(255,255,255,0.58);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.account-hero-actions { display: flex; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
+.account-hero-actions .btn-coral,
+.account-hero-actions .btn-ghost { padding: 0.72rem 1.35rem; font-size: 0.9rem; }
+.account-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.account-stats article {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.account-stats span {
+  display: block;
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.account-stats small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.78rem;
+}
+.account-stats .is-attention {
+  background: rgba(232,113,74,0.12);
+  border-color: rgba(232,113,74,0.38);
+}
+.account-stats .is-attention span { color: #ffd0c2; }
+.account-next {
+  margin-bottom: 28px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(45,125,111,0.12);
+  border: 1px solid rgba(94,201,182,0.28);
+  color: rgba(255,255,255,0.78);
+  font-size: 0.92rem;
+}
+.account-next strong { color: #fff; font-weight: 600; }
+.account-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.85fr);
+  gap: 22px;
+  align-items: start;
+}
+.account-section-head { margin-bottom: 16px; }
+.account-section-head h2 {
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+.account-section-head p {
+  margin-top: 6px;
+  color: rgba(255,255,255,0.52);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.account-panel {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 92px;
+}
+.account-photo { display: flex; align-items: center; gap: 14px; }
+.account-photo .account-avatar { width: 72px; height: 72px; font-size: 1.2rem; }
+.account-photo-actions { min-width: 0; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.account-photo-actions p { width: 100%; font-size: 0.75rem; color: rgba(255,255,255,0.42); }
+.account-upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 8px 14px;
+  border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.22);
+  color: #fff;
+  font-size: 0.82rem;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-upload:hover { border-color: #fff; background: rgba(255,255,255,0.06); }
+.account-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.account-text-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.62);
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 8px 0;
+}
+.account-text-btn:hover { color: #ffb4a2; }
+.account-panel input[readonly] { color: rgba(255,255,255,0.5); cursor: default; }
+.account-saved { color: #5ec9b6; font-size: 0.84rem; line-height: 1.45; }
+.account-save { align-self: flex-start; padding: 0.72rem 1.35rem; font-size: 0.9rem; }
+.trip-list { display: flex; flex-direction: column; gap: 14px; }
+.trip-error { margin-bottom: 4px; }
+.trip-empty, .trip-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 20px;
+  padding: 22px;
+}
+.trip-empty h3 {
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: 1.45rem;
+  margin-bottom: 8px;
+}
+.trip-empty p { color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 42ch; margin-bottom: 18px; }
+.trip-card.needs-you { border-color: rgba(232,113,74,0.45); background: linear-gradient(180deg, rgba(232,113,74,0.1), rgba(255,255,255,0.03) 42%); }
+.trip-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.trip-when { font-size: 0.78rem; letter-spacing: 0.2px; color: rgba(255,255,255,0.48); margin-bottom: 6px; }
+.trip-card h3 {
+  font-family: var(--font-playfair), 'Playfair Display', serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.trip-pill {
+  flex-shrink: 0;
+  border-radius: 50px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  border: 1px solid transparent;
+}
+.trip-pill-pending { color: #f5d98a; background: rgba(201,150,58,0.14); border-color: rgba(201,150,58,0.35); }
+.trip-pill-matched { color: #ffd0c2; background: rgba(232,113,74,0.16); border-color: rgba(232,113,74,0.4); }
+.trip-pill-confirmed, .trip-pill-in_progress { color: #b7f0e4; background: rgba(45,125,111,0.2); border-color: rgba(94,201,182,0.35); }
+.trip-pill-completed { color: rgba(255,255,255,0.72); background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+.trip-pill-cancelled { color: #ffb4b4; background: rgba(220,60,60,0.14); border-color: rgba(220,60,60,0.32); }
+.trip-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+  margin-top: 18px;
+}
+.trip-facts div { min-width: 0; }
+.trip-facts dt { font-size: 0.72rem; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+.trip-facts dd { font-size: 0.95rem; color: #fff; line-height: 1.4; }
+.trip-price { font-family: var(--font-playfair), 'Playfair Display', serif; font-size: 1.15rem !important; }
+.trip-notes { margin-top: 14px; display: flex; flex-direction: column; gap: 4px; list-style: none; }
+.trip-notes li { color: rgba(255,255,255,0.58); font-size: 0.86rem; line-height: 1.45; }
+.trip-prompt { margin-top: 14px; color: #ffd0c2; font-size: 0.9rem; }
+@media (max-width: 900px) {
+  .account-hero, .account-identity { align-items: flex-start; flex-direction: column; }
+  .account-layout { grid-template-columns: 1fr; }
+  .account-panel { position: static; }
+}
+@media (max-width: 640px) {
+  .account-page { padding-top: 96px; }
+  .account-stats { grid-template-columns: 1fr; }
+  .account-stats article { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .account-stats small { margin-top: 0; }
+  .trip-facts { grid-template-columns: 1fr; }
+  .trip-card-head { flex-direction: column; }
+}

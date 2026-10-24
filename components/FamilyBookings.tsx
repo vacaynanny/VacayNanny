@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BookingReviewForm from '@/components/BookingReviewForm'
 import BookingThread from '@/components/BookingThread'
@@ -15,7 +16,50 @@ import {
 } from '@/lib/booking'
 import { useSiteCatalog } from '@/components/SiteCatalogProvider'
 import { formatKes } from '@/lib/constants'
-import type { Booking } from '@/lib/types'
+import type { Booking, NannyResponse } from '@/lib/types'
+
+function nannyReply(response: NannyResponse) {
+  switch (response) {
+    case 'pending':
+      return 'Waiting on the nanny'
+    case 'accepted':
+      return 'Nanny accepted'
+    case 'declined':
+      return 'Nanny declined'
+    default: {
+      const _never: never = response
+      return _never
+    }
+  }
+}
+
+function parseDay(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+function formatTripRange(checkIn: string, checkOut: string) {
+  const start = parseDay(checkIn)
+  const end = parseDay(checkOut)
+  if (!start || !end) return `${checkIn} → ${checkOut}`
+  const sameYear = start.getFullYear() === end.getFullYear()
+  const startLabel = start.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: sameYear ? undefined : 'numeric',
+  })
+  const endLabel = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return `${startLabel} – ${endLabel}`
+}
+
+function tripNights(checkIn: string, checkOut: string) {
+  const start = parseDay(checkIn)
+  const end = parseDay(checkOut)
+  if (!start || !end) return null
+  const nights = Math.round((end.getTime() - start.getTime()) / 86_400_000)
+  return nights > 0 ? nights : null
+}
 
 export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
   const router = useRouter()
@@ -47,12 +91,18 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
   }
 
   if (bookings.length === 0) {
-    return <p style={{ color: 'rgba(255,255,255,0.5)' }}>No bookings yet. Search nannies and send a request.</p>
+    return (
+      <div className="trip-empty">
+        <h3>No trips yet</h3>
+        <p>Search nannies and send a request. Matches, messages, and reviews will show up here.</p>
+        <Link href="/nannies" className="btn-coral">Find a nanny</Link>
+      </div>
+    )
   }
 
   return (
-    <div>
-      {error && <p className="field-error-msg" style={{ marginBottom: 16 }}>{error}</p>}
+    <div className="trip-list">
+      {error && <p className="field-error-msg trip-error">{error}</p>}
       {bookings.map(b => {
         const care = parseCareType(b.care_type)
         const canConfirm = b.status === 'matched' && Boolean(b.nanny_id) && !b.parent_confirmed_at
@@ -60,27 +110,48 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
         const canReschedule = canCancel
         const refund = cancellationRefundPercent(b.check_in, new Date(), policies)
         const nannyName = b.nannies?.display_name
+        const nights = tripNights(b.check_in, b.check_out)
+        const family = [b.children_count ? `${b.children_count} ${b.children_count === '1' ? 'child' : 'children'}` : '', b.youngest_age].filter(Boolean).join(' · ')
         return (
-          <div className="form-card" key={b.id}>
-            <div className="review-row">
-              <span className="review-key">
-                <strong>{b.destination}</strong>
-                <br />
-                <small style={{ color: 'rgba(255,255,255,0.4)' }}>{b.check_in} → {b.check_out}</small>
-              </span>
-              <span className="review-val">{statusLabel(b.status)}</span>
-            </div>
-            <div className="review-row"><span className="review-key">Nanny</span><span className="review-val">{nannyName || 'Awaiting match'}</span></div>
-            <div className="review-row"><span className="review-key">Care</span><span className="review-val">{careTypeLabel(care)}</span></div>
-            <div className="review-row"><span className="review-key">Estimate</span><span className="review-val">{b.total_amount_kes != null ? formatKes(b.total_amount_kes) : '—'}</span></div>
-            {b.parent_confirmed_at && <div className="review-row"><span className="review-key">You</span><span className="review-val">Confirmed</span></div>}
-            {b.nanny_response && <div className="review-row"><span className="review-key">Nanny reply</span><span className="review-val">{b.nanny_response}</span></div>}
-            {b.status === 'cancelled' && (
-              <div className="review-row">
-                <span className="review-key">Refund</span>
-                <span className="review-val">{refundPolicyLabel(b.refund_percent ?? 0, policies)}</span>
+          <article className={`trip-card${canConfirm ? ' needs-you' : ''}`} key={b.id}>
+            <div className="trip-card-head">
+              <div>
+                <p className="trip-when">
+                  {formatTripRange(b.check_in, b.check_out)}
+                  {nights ? ` · ${nights} ${nights === 1 ? 'night' : 'nights'}` : ''}
+                </p>
+                <h3>{b.destination}</h3>
               </div>
+              <span className={`trip-pill trip-pill-${b.status}`}>{statusLabel(b.status)}</span>
+            </div>
+            <dl className="trip-facts">
+              <div>
+                <dt>Nanny</dt>
+                <dd>{nannyName || 'Awaiting match'}</dd>
+              </div>
+              <div>
+                <dt>Care</dt>
+                <dd>{careTypeLabel(care)}</dd>
+              </div>
+              {family && (
+                <div>
+                  <dt>Family</dt>
+                  <dd>{family}</dd>
+                </div>
+              )}
+              <div>
+                <dt>Estimate</dt>
+                <dd className="trip-price">{b.total_amount_kes != null ? formatKes(b.total_amount_kes) : '—'}</dd>
+              </div>
+            </dl>
+            {(b.parent_confirmed_at || b.nanny_response || b.status === 'cancelled') && (
+              <ul className="trip-notes">
+                {b.parent_confirmed_at && <li>You confirmed this match.</li>}
+                {b.nanny_response && <li>{nannyReply(b.nanny_response)}</li>}
+                {b.status === 'cancelled' && <li>{refundPolicyLabel(b.refund_percent ?? 0, policies)}</li>}
+              </ul>
             )}
+            {canConfirm && nannyName && <p className="trip-prompt">Confirm this match to lock in {nannyName}.</p>}
             {(canConfirm || canReschedule || canCancel) && (
             <div className="booking-actions">
               {canConfirm && (
@@ -144,7 +215,7 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
             {bookingHasThread(b) && (
               <BookingThread bookingId={b.id} viewerRole="parent" counterpartName={nannyName || undefined} />
             )}
-          </div>
+          </article>
         )
       })}
     </div>
