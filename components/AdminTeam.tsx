@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation'
 import type { RegisteredAccount, UserRole } from '@/lib/types'
 
 const ROLES: UserRole[] = ['parent', 'nanny', 'admin']
+const FILTERS: Array<{ id: UserRole | 'all'; label: string }> = [
+  { id: 'all', label: 'All' },
+  { id: 'parent', label: 'Families' },
+  { id: 'nanny', label: 'Nannies' },
+  { id: 'admin', label: 'Admins' },
+]
 
 function roleLabel(role: UserRole) {
   switch (role) {
@@ -76,22 +82,32 @@ export default function AdminTeam({ accounts, adminId }: { accounts: RegisteredA
   return (
     <div className="ops-stack">
       <p className="ops-note">Every login, including people who registered before profiles existed. Family and nanny come from the account role.</p>
-      <div className="ops-filters">
-        <input
-          className="ops-search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search name or email"
-          aria-label="Search accounts"
-        />
-        <select aria-label="Account type" value={roleFilter} onChange={e => {
-          const next = e.target.value
-          if (next === 'all' || next === 'parent' || next === 'nanny' || next === 'admin') setRoleFilter(next)
-        }}>
-          <option value="all">All accounts</option>
-          {ROLES.map(role => <option key={role} value={role}>{roleLabel(role)}</option>)}
-        </select>
+      <div className="ops-filter-pills" role="tablist" aria-label="Account type">
+        {FILTERS.map(filter => {
+          const count = filter.id === 'all'
+            ? accounts.length
+            : accounts.filter(account => account.role === filter.id).length
+          return (
+            <button
+              key={filter.id}
+              type="button"
+              role="tab"
+              aria-selected={roleFilter === filter.id}
+              className={roleFilter === filter.id ? 'active' : ''}
+              onClick={() => setRoleFilter(filter.id)}
+            >
+              {filter.label} ({count})
+            </button>
+          )
+        })}
       </div>
+      <input
+        className="ops-search"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search name or email"
+        aria-label="Search accounts"
+      />
       {error && <p className="field-error-msg">{error}</p>}
       {shown.length === 0 && <p className="ops-note">No accounts match that search.</p>}
       {shown.map(account => (
