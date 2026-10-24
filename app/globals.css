@@ -195,7 +195,7 @@ footer.sec   { background:rgba(1,6,10,0.96); }
 
 /* ── PRICING ── */
 .pricing-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:1.8rem;margin-top:3rem;perspective:1200px; }
-.pricing-grid.has-hover .price-card:not(:hover) { transform:scale(0.94) translateY(6px);filter:blur(1.5px) brightness(0.6);opacity:0.72; }
+.pricing-grid:hover .price-card:not(:hover) { transform:scale(0.94) translateY(6px);filter:blur(1.5px) brightness(0.6);opacity:0.72; }
 .price-card { position:relative;border-radius:26px;padding:2.6rem 2.2rem 2.2rem;overflow:hidden;cursor:pointer;transition:transform 0.45s cubic-bezier(0.22,1,0.36,1),filter 0.45s cubic-bezier(0.22,1,0.36,1),opacity 0.45s ease,box-shadow 0.45s ease;will-change:transform,filter;background:rgba(8,22,32,0.80);border:1px solid rgba(255,255,255,0.09); }
 .price-card:hover { transform:scale(1.055) translateY(-10px);z-index:10; }
 .price-card::before { content:'';position:absolute;inset:0;border-radius:inherit;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1;opacity:0.5; }
@@ -394,7 +394,7 @@ footer.sec   { background:rgba(1,6,10,0.96); }
   .search-box { grid-template-columns:1fr; }
   .search-box.nanny-search { grid-template-columns:1fr; }
   .pricing-grid { grid-template-columns:1fr;gap:1.4rem; }
-  .pricing-grid.has-hover .price-card:not(:hover) { filter:none;opacity:1;transform:none; }
+  .pricing-grid:hover .price-card:not(:hover) { filter:none;opacity:1;transform:none; }
   .price-card:hover { transform:scale(1.02) translateY(-4px); }
   .testi-grid { grid-template-columns:1fr; }
   .nannies-grid { grid-template-columns:1fr; }
@@ -727,6 +727,80 @@ a.btn-submit { display:block; text-align:center; text-decoration:none; }
   .login-heading h1 { font-size:2.05rem; margin:10px 0 6px; }
 }
 .profile-layout { display:grid; grid-template-columns:1.6fr 0.9fr; gap:24px; padding-bottom:80px; align-items:start; }
+.nanny-page { width:min(1080px, 100%); margin:0 auto; padding:118px 5% 88px; }
+.nanny-stage { display:grid; grid-template-columns:minmax(280px, 400px) minmax(0, 1fr); gap:36px; align-items:start; margin-top:22px; }
+.nanny-portrait { position:relative; height:520px; border-radius:24px; overflow:hidden; background:#10202b; }
+.nanny-copy h1 { font-family:var(--font-playfair), 'Playfair Display', serif; font-size:clamp(2.4rem, 4.5vw, 3.6rem); font-weight:900; line-height:1.05; }
+.nanny-place { margin-top:10px; color:rgba(255,255,255,0.58); font-size:1.02rem; line-height:1.5; }
+.nanny-bio { margin-top:18px; max-width:58ch; color:rgba(255,255,255,0.78); font-size:1.02rem; line-height:1.7; }
+.nanny-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.nanny-chips span, .nanny-facts .nanny-chips span {
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+  color:rgba(255,255,255,0.82); border-radius:999px; padding:6px 12px; font-size:0.82rem;
+}
+.nanny-book {
+  margin-top:26px; padding:22px 22px 20px; border-radius:20px;
+  background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+}
+.nanny-rate { font-family:var(--font-playfair), 'Playfair Display', serif; font-size:2.5rem; font-weight:900; line-height:1; }
+.nanny-rate sup { font-size:0.95rem; font-weight:700; margin-right:4px; vertical-align:super; }
+.nanny-rate small { font-family:var(--font-dm-sans), 'DM Sans', sans-serif; font-size:0.95rem; font-weight:500; color:rgba(255,255,255,0.45); }
+.nanny-shift, .nanny-rating { margin-top:10px; color:rgba(255,255,255,0.55); font-size:0.92rem; }
+.nanny-rating span { color:var(--gold); letter-spacing:1px; margin-right:6px; }
+.nanny-book .btn-submit { width:100%; margin-top:18px; }
+.nanny-facts { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-top:36px; }
+.nanny-facts > div, .nanny-reviews {
+  background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.08); border-radius:18px; padding:18px 18px 16px;
+}
+.nanny-facts h2, .nanny-reviews h2 {
+  font-size:0.74rem; letter-spacing:1px; text-transform:uppercase; color:var(--coral); font-weight:700;
+}
+.nanny-reviews { margin-top:18px; }
+.nanny-reviews blockquote { margin:0; padding:16px 0; border-top:1px solid rgba(255,255,255,0.07); }
+.nanny-reviews blockquote p { color:rgba(255,255,255,0.82); line-height:1.65; margin-top:8px; }
+.nanny-reviews footer { margin-top:8px; color:rgba(255,255,255,0.42); font-size:0.84rem; }
+@media (max-width:860px) {
+  .nanny-stage { grid-template-columns:1fr; gap:22px; }
+  .nanny-portrait { height:380px; }
+  .nanny-facts { grid-template-columns:1fr; }
+}
+.contact-page { width:min(1040px, 100%); margin:0 auto; padding:118px 5% 88px; }
+.contact-head { max-width:640px; margin-bottom:28px; }
+.contact-head .eyebrow { display:inline-block; background:rgba(232,113,74,0.15); border:1px solid rgba(232,113,74,0.3); color:var(--coral); font-size:0.75rem; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; padding:5px 12px; border-radius:50px; margin-bottom:14px; }
+.contact-head h1 { font-family:var(--font-playfair), 'Playfair Display', serif; font-size:clamp(2.4rem, 5vw, 3.6rem); font-weight:900; line-height:1.05; }
+.contact-head h1 em { color:var(--coral); font-style:italic; }
+.contact-head p { margin-top:12px; max-width:48ch; color:rgba(255,255,255,0.58); font-size:1.05rem; line-height:1.6; }
+.contact-grid { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(260px, 0.8fr); gap:22px; align-items:start; }
+.contact-form, .contact-channel, .contact-note {
+  background:rgba(255,255,255,0.035); border:1px solid rgba(255,255,255,0.1); border-radius:20px;
+}
+.contact-form { display:flex; flex-direction:column; gap:14px; padding:22px; }
+.contact-form h2, .contact-note h2 { font-family:var(--font-playfair), 'Playfair Display', serif; font-size:1.35rem; font-weight:700; }
+.contact-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.contact-form label { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.contact-form label span { font-size:0.72rem; letter-spacing:0.6px; text-transform:uppercase; color:rgba(255,255,255,0.48); }
+.contact-form input, .contact-form textarea {
+  width:100%; box-sizing:border-box; background:rgba(8,18,28,0.72); color:#fff;
+  border:1px solid rgba(255,255,255,0.14); border-radius:10px; min-height:46px; padding:11px 12px;
+  font-family:var(--font-dm-sans), 'DM Sans', sans-serif; font-size:0.95rem; outline:none; color-scheme:dark;
+}
+.contact-form textarea { min-height:150px; resize:vertical; line-height:1.5; }
+.contact-form input:focus, .contact-form textarea:focus { border-color:var(--coral); background:rgba(232,113,74,0.08); }
+.contact-form .btn-submit { align-self:flex-start; margin-top:4px; padding:14px 28px; }
+.contact-done p { margin-top:8px; color:rgba(255,255,255,0.65); line-height:1.6; }
+.contact-aside { display:flex; flex-direction:column; gap:12px; }
+.contact-channel { display:flex; flex-direction:column; gap:4px; padding:18px 18px 16px; text-decoration:none; color:inherit; }
+.contact-channel:hover { border-color:rgba(232,113,74,0.45); }
+.contact-channel span { font-size:0.72rem; letter-spacing:0.8px; text-transform:uppercase; color:var(--coral); font-weight:700; }
+.contact-channel strong { font-size:1.02rem; }
+.contact-channel small { color:rgba(255,255,255,0.48); font-size:0.84rem; }
+.contact-note { padding:18px; }
+.contact-note ul { margin-top:12px; display:flex; flex-direction:column; gap:8px; list-style:none; }
+.contact-note li { color:rgba(255,255,255,0.72); font-size:0.92rem; line-height:1.4; }
+.contact-note li::before { content:'·'; color:var(--coral); margin-right:8px; }
+@media (max-width:800px) {
+  .contact-grid, .contact-row { grid-template-columns:1fr; }
+}
 .dash-page { padding-bottom:80px; }
 .dash-toolbar { display:flex; gap:12px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }
 .dash-tabs { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px; }

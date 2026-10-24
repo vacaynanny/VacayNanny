@@ -101,7 +101,6 @@ export default function HomePage({
   const [modalOpen, setModalOpen] = useState(false)
   const [bookDefaults, setBookDefaults] = useState<BookingDefaults>({})
   const [faqOpen, setFaqOpen] = useState<string | null>(null)
-  const [pricingHover, setPricingHover] = useState(false)
   const [search, setSearch] = useState({ destination: '', checkIn: '', checkOut: '', tier: '', infant: '', cert: '' })
 
   // Robust reveal observer with fallback timeout
@@ -365,11 +364,7 @@ export default function HomePage({
             {site.tiers.length === 0 ? (
               <p className="sec-sub">Published rates are not available right now.</p>
             ) : (
-            <div
-              className={`pricing-grid reveal${pricingHover ? ' has-hover' : ''}`}
-              onMouseEnter={() => setPricingHover(true)}
-              onMouseLeave={() => setPricingHover(false)}
-            >
+            <div className="pricing-grid reveal">
               {site.tiers.map((tier, index) => (
                 <div className={`price-card ${tier.code}`} key={tier.code}>
                   <div className="medal-stripe" />
