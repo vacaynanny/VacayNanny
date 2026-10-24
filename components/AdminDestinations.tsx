@@ -108,38 +108,38 @@ export default function AdminDestinations({ destinations }: { destinations: Dest
   }
 
   return (
-    <div className="price-stack">
+    <div className="edit-stack">
       {error && <p className="field-error-msg">{error}</p>}
-      <header className="price-head">
+      <header className="edit-head">
         <h2>Destinations</h2>
         <p>Live places show on the homepage, the booking form, nanny search, and the apply flow.</p>
       </header>
-      <form className="price-card" onSubmit={create}>
-        <div className="price-card-top">
+      <form className="edit-card" onSubmit={create}>
+        <div className="edit-top">
           <strong>Add a destination</strong>
-          <label className="price-publish">
+          <label className="edit-publish">
             <input type="checkbox" checked={draft.is_active} onChange={e => setDraft(d => ({ ...d, is_active: e.target.checked }))} />
             Show publicly
           </label>
         </div>
-        <div className="price-fields">
-          <label className="price-field">
+        <div className="edit-fields">
+          <label className="edit-field">
             <span>Name</span>
             <input id="dest-new-name" required value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
           </label>
-          <label className="price-field">
+          <label className="edit-field">
             <span>Country</span>
             <input id="dest-new-country" required value={draft.country} onChange={e => setDraft(d => ({ ...d, country: e.target.value }))} />
           </label>
-          <label className="price-field">
+          <label className="edit-field">
             <span>Image URL</span>
             <input id="dest-new-image" value={draft.image_url} onChange={e => setDraft(d => ({ ...d, image_url: e.target.value }))} placeholder="https://…" />
           </label>
-          <label className="price-field">
+          <label className="edit-field">
             <span>Order</span>
             <input id="dest-new-sort" type="number" value={draft.sort_order} onChange={e => setDraft(d => ({ ...d, sort_order: Number(e.target.value) }))} />
           </label>
-          <label className="price-field is-wide">
+          <label className="edit-field is-wide">
             <span>Description</span>
             <textarea id="dest-new-desc" rows={4} value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))} />
           </label>
@@ -156,14 +156,14 @@ export default function AdminDestinations({ destinations }: { destinations: Dest
         </div>
       )}
       {destinations.length > 0 && (
-        <div className="price-grid">
+        <div className="edit-grid">
           {destinations.map(d => {
             const form = edit(d.id)
             return (
-              <form className="price-card" key={d.id} onSubmit={e => { e.preventDefault(); save(d.id) }}>
-                <div className="price-card-top">
+              <form className="edit-card" key={d.id} onSubmit={e => { e.preventDefault(); save(d.id) }}>
+                <div className="edit-top">
                   <div>
-                    <p className="price-kicker">{form.country || 'Destination'}</p>
+                    <p className="edit-kicker">{form.country || 'Destination'}</p>
                     <strong>{form.name || d.name}</strong>
                   </div>
                   <span className={`ops-pill${d.is_active ? ' is-live' : ''}`}>{d.is_active ? 'Live' : 'Hidden'}</span>
@@ -173,33 +173,33 @@ export default function AdminDestinations({ destinations }: { destinations: Dest
                     <MediaImage src={form.image_url} alt="" fill sizes="420px" style={{ objectFit: 'cover' }} />
                   </div>
                 )}
-                <div className="price-fields">
-                  <label className="price-field">
+                <div className="edit-fields">
+                  <label className="edit-field">
                     <span>Name</span>
                     <input required value={form.name} onChange={e => patchEdit(d.id, 'name', e.target.value)} />
                   </label>
-                  <label className="price-field">
+                  <label className="edit-field">
                     <span>Country</span>
                     <input required value={form.country} onChange={e => patchEdit(d.id, 'country', e.target.value)} />
                   </label>
-                  <label className="price-field">
+                  <label className="edit-field">
                     <span>Slug</span>
                     <input value={form.slug} onChange={e => patchEdit(d.id, 'slug', e.target.value)} />
                   </label>
-                  <label className="price-field">
+                  <label className="edit-field">
                     <span>Order</span>
                     <input type="number" value={form.sort_order} onChange={e => patchEdit(d.id, 'sort_order', Number(e.target.value))} />
                   </label>
-                  <label className="price-field is-wide">
+                  <label className="edit-field is-wide">
                     <span>Image URL</span>
                     <input value={form.image_url} onChange={e => patchEdit(d.id, 'image_url', e.target.value)} />
                   </label>
-                  <label className="price-field is-wide">
+                  <label className="edit-field is-wide">
                     <span>Description</span>
                     <textarea rows={4} value={form.description} onChange={e => patchEdit(d.id, 'description', e.target.value)} />
                   </label>
                 </div>
-                <label className="price-publish">
+                <label className="edit-publish">
                   <input type="checkbox" checked={form.is_active} onChange={e => patchEdit(d.id, 'is_active', e.target.checked)} />
                   Show publicly
                 </label>
