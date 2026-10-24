@@ -108,112 +108,116 @@ export default function AdminDestinations({ destinations }: { destinations: Dest
   }
 
   return (
-    <div>
-      {error && <p className="field-error-msg" style={{ marginBottom: 16 }}>{error}</p>}
-      <form className="form-card" onSubmit={create}>
-        <h3>Add destination</h3>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', margin: '8px 0 16px' }}>
-          Live destinations appear on the homepage, booking form, nanny search, and apply flow. Hidden ones stay off public lists.
-        </p>
-        <div className="mrow">
-          <div className="field">
-            <label htmlFor="dest-new-name">Name</label>
+    <div className="price-stack">
+      {error && <p className="field-error-msg">{error}</p>}
+      <header className="price-head">
+        <h2>Destinations</h2>
+        <p>Live places show on the homepage, the booking form, nanny search, and the apply flow.</p>
+      </header>
+      <form className="price-card" onSubmit={create}>
+        <div className="price-card-top">
+          <strong>Add a destination</strong>
+          <label className="price-publish">
+            <input type="checkbox" checked={draft.is_active} onChange={e => setDraft(d => ({ ...d, is_active: e.target.checked }))} />
+            Show publicly
+          </label>
+        </div>
+        <div className="price-fields">
+          <label className="price-field">
+            <span>Name</span>
             <input id="dest-new-name" required value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
-          </div>
-          <div className="field">
-            <label htmlFor="dest-new-country">Country</label>
+          </label>
+          <label className="price-field">
+            <span>Country</span>
             <input id="dest-new-country" required value={draft.country} onChange={e => setDraft(d => ({ ...d, country: e.target.value }))} />
-          </div>
-        </div>
-        <div className="mrow">
-          <div className="field">
-            <label htmlFor="dest-new-image">Image URL</label>
+          </label>
+          <label className="price-field">
+            <span>Image URL</span>
             <input id="dest-new-image" value={draft.image_url} onChange={e => setDraft(d => ({ ...d, image_url: e.target.value }))} placeholder="https://…" />
-          </div>
-          <div className="field">
-            <label htmlFor="dest-new-sort">Sort order</label>
+          </label>
+          <label className="price-field">
+            <span>Order</span>
             <input id="dest-new-sort" type="number" value={draft.sort_order} onChange={e => setDraft(d => ({ ...d, sort_order: Number(e.target.value) }))} />
-          </div>
+          </label>
+          <label className="price-field is-wide">
+            <span>Description</span>
+            <textarea id="dest-new-desc" rows={4} value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))} />
+          </label>
         </div>
-        <div className="field" style={{ marginBottom: 12 }}>
-          <label htmlFor="dest-new-desc">Description</label>
-          <textarea id="dest-new-desc" value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))} />
-        </div>
-        <label className="force-assign">
-          <input type="checkbox" checked={draft.is_active} onChange={e => setDraft(d => ({ ...d, is_active: e.target.checked }))} />
-          Show on the public site
-        </label>
-        <button className="btn-coral" type="submit" disabled={busy === 'new'} style={{ marginTop: 12 }}>
+        <button className="btn-coral" type="submit" disabled={busy === 'new'}>
           {busy === 'new' ? 'Adding…' : 'Add destination'}
         </button>
       </form>
 
       {destinations.length === 0 && (
-        <p style={{ color: 'rgba(255,255,255,0.5)' }}>No destinations in the database yet.</p>
+        <div className="ops-empty">
+          <h3>No destinations yet</h3>
+          <p>Add the first place above. It stays off the public site until “Show publicly” is checked.</p>
+        </div>
       )}
-      {destinations.map(d => {
-        const form = edit(d.id)
-        return (
-          <form className="form-card" key={d.id} onSubmit={e => { e.preventDefault(); save(d.id) }}>
-            <div className="review-row">
-              <span className="review-key"><strong>{d.name}</strong><br /><small>{d.country} · {d.slug}</small></span>
-              <span className="review-val">{d.is_active ? 'Live' : 'Hidden'}</span>
-            </div>
-            {form.image_url && (
-              <div style={{ position: 'relative', width: '100%', height: 140, borderRadius: 12, overflow: 'hidden', margin: '12px 0' }}>
-                <MediaImage src={form.image_url} alt="" fill sizes="640px" style={{ objectFit: 'cover' }} />
-              </div>
-            )}
-            <div className="mrow">
-              <div className="field">
-                <label>Name</label>
-                <input required value={form.name} onChange={e => patchEdit(d.id, 'name', e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Country</label>
-                <input required value={form.country} onChange={e => patchEdit(d.id, 'country', e.target.value)} />
-              </div>
-            </div>
-            <div className="mrow">
-              <div className="field">
-                <label>Slug</label>
-                <input value={form.slug} onChange={e => patchEdit(d.id, 'slug', e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Sort order</label>
-                <input type="number" value={form.sort_order} onChange={e => patchEdit(d.id, 'sort_order', Number(e.target.value))} />
-              </div>
-            </div>
-            <div className="field" style={{ marginBottom: 12 }}>
-              <label>Image URL</label>
-              <input value={form.image_url} onChange={e => patchEdit(d.id, 'image_url', e.target.value)} />
-            </div>
-            <div className="field" style={{ marginBottom: 12 }}>
-              <label>Description</label>
-              <textarea value={form.description} onChange={e => patchEdit(d.id, 'description', e.target.value)} />
-            </div>
-            <label className="force-assign">
-              <input type="checkbox" checked={form.is_active} onChange={e => patchEdit(d.id, 'is_active', e.target.checked)} />
-              Show on the public site
-            </label>
-            <div className="booking-actions">
-              <button className="btn-coral" type="submit" disabled={busy === d.id}>
-                {busy === d.id ? 'Saving…' : 'Save'}
-              </button>
-              {d.is_active && (
-                <button
-                  className="btn-ghost"
-                  type="button"
-                  disabled={busy === d.id}
-                  onClick={() => hide(d.id)}
-                >
-                  Hide from public lists
-                </button>
-              )}
-            </div>
-          </form>
-        )
-      })}
+      {destinations.length > 0 && (
+        <div className="price-grid">
+          {destinations.map(d => {
+            const form = edit(d.id)
+            return (
+              <form className="price-card" key={d.id} onSubmit={e => { e.preventDefault(); save(d.id) }}>
+                <div className="price-card-top">
+                  <div>
+                    <p className="price-kicker">{form.country || 'Destination'}</p>
+                    <strong>{form.name || d.name}</strong>
+                  </div>
+                  <span className={`ops-pill${d.is_active ? ' is-live' : ''}`}>{d.is_active ? 'Live' : 'Hidden'}</span>
+                </div>
+                {form.image_url && (
+                  <div className="dest-preview">
+                    <MediaImage src={form.image_url} alt="" fill sizes="420px" style={{ objectFit: 'cover' }} />
+                  </div>
+                )}
+                <div className="price-fields">
+                  <label className="price-field">
+                    <span>Name</span>
+                    <input required value={form.name} onChange={e => patchEdit(d.id, 'name', e.target.value)} />
+                  </label>
+                  <label className="price-field">
+                    <span>Country</span>
+                    <input required value={form.country} onChange={e => patchEdit(d.id, 'country', e.target.value)} />
+                  </label>
+                  <label className="price-field">
+                    <span>Slug</span>
+                    <input value={form.slug} onChange={e => patchEdit(d.id, 'slug', e.target.value)} />
+                  </label>
+                  <label className="price-field">
+                    <span>Order</span>
+                    <input type="number" value={form.sort_order} onChange={e => patchEdit(d.id, 'sort_order', Number(e.target.value))} />
+                  </label>
+                  <label className="price-field is-wide">
+                    <span>Image URL</span>
+                    <input value={form.image_url} onChange={e => patchEdit(d.id, 'image_url', e.target.value)} />
+                  </label>
+                  <label className="price-field is-wide">
+                    <span>Description</span>
+                    <textarea rows={4} value={form.description} onChange={e => patchEdit(d.id, 'description', e.target.value)} />
+                  </label>
+                </div>
+                <label className="price-publish">
+                  <input type="checkbox" checked={form.is_active} onChange={e => patchEdit(d.id, 'is_active', e.target.checked)} />
+                  Show publicly
+                </label>
+                <div className="ops-card-actions">
+                  <button className="btn-coral" type="submit" disabled={busy === d.id}>
+                    {busy === d.id ? 'Saving…' : 'Save'}
+                  </button>
+                  {d.is_active && (
+                    <button className="btn-ghost" type="button" disabled={busy === d.id} onClick={() => hide(d.id)}>
+                      Hide
+                    </button>
+                  )}
+                </div>
+              </form>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

@@ -261,7 +261,7 @@ export default function AdminClient({
       {tab === 'applications' && (
         <div className="ops-stack">
           <div className="ops-filters">
-            <input className="ops-search" value={appQuery} onChange={e => setAppQuery(e.target.value)} placeholder="Search name, email, or town" aria-label="Search applications" />
+            <input type="text" className="ops-search" value={appQuery} onChange={e => setAppQuery(e.target.value)} placeholder="Search name, email, or town" aria-label="Search applications" />
             <select aria-label="Application status" value={appStatus} onChange={e => { if (isAppStatus(e.target.value)) setAppStatus(e.target.value) }}>
               <option value="all">All statuses</option>
               {APP_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
@@ -288,7 +288,12 @@ export default function AdminClient({
               </p>
               {errors[a.id] && <p className="field-error-msg">{errors[a.id]}</p>}
               <div className="ops-card-actions">
-                <Link className="btn-coral" href={`/admin/applications/${a.id}`}>Open file</Link>
+                {a.status !== 'approved' && (
+                  <button className="btn-coral" disabled={busy === a.id} onClick={() => saveAppStatus(a.id, 'approved')}>
+                    {busy === a.id ? 'Approving…' : 'Approve and publish'}
+                  </button>
+                )}
+                <Link className={a.status === 'approved' ? 'btn-coral' : 'btn-ghost'} href={`/admin/applications/${a.id}`}>Open file</Link>
                 <label className="ops-status-field">
                   <span>Status</span>
                   <select aria-label={`Status for ${a.full_name}`} value={a.status} disabled={busy === a.id} onChange={e => {
@@ -307,7 +312,7 @@ export default function AdminClient({
       {tab === 'bookings' && (
         <div className="ops-stack">
           <div className="ops-filters">
-            <input className="ops-search" value={bookQuery} onChange={e => setBookQuery(e.target.value)} placeholder="Search family, email, or destination" aria-label="Search bookings" />
+            <input type="text" className="ops-search" value={bookQuery} onChange={e => setBookQuery(e.target.value)} placeholder="Search family, email, or destination" aria-label="Search bookings" />
             <select aria-label="Booking status" value={bookStatus} onChange={e => { if (isBookStatus(e.target.value)) setBookStatus(e.target.value) }}>
               <option value="all">All statuses</option>
               {BOOK_STATUSES.map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}
@@ -423,13 +428,19 @@ export default function AdminClient({
         </div>
       )}
 
-      {tab === 'nannies' && <AdminNannies nannies={nannies} />}
+      {tab === 'nannies' && <AdminNannies nannies={nannies} accounts={accounts} />}
       {tab === 'reviews' && <AdminReviews reviews={reviews} />}
       {tab === 'inbox' && <AdminInbox contactMessages={contactMessages} waitlist={waitlist} />}
       {tab === 'destinations' && <AdminDestinations destinations={destinations} />}
       {tab === 'pricing' && <AdminCatalog section="pricing" catalog={adminCatalog} />}
       {tab === 'content' && <AdminCatalog section="content" catalog={adminCatalog} />}
-      {tab === 'team' && <AdminTeam accounts={accounts} adminId={adminId} />}
+      {tab === 'team' && (
+        <AdminTeam
+          accounts={accounts}
+          adminId={adminId}
+          publishedUserIds={nannies.map(nanny => nanny.user_id).filter((id): id is string => Boolean(id))}
+        />
+      )}
     </div>
   )
 }
