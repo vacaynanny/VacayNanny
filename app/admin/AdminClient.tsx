@@ -24,7 +24,7 @@ import AdminTeam from '@/components/AdminTeam'
 import { useSiteCatalog } from '@/components/SiteCatalogProvider'
 import type { SiteCatalog } from '@/lib/catalog'
 import BookingThread from '@/components/BookingThread'
-import type { ApplicationStatus, Booking, BookingStatus, ContactMessage, Destination, Nanny, NannyApplication, Profile, Review, WaitlistEntry } from '@/lib/types'
+import type { ApplicationStatus, Booking, BookingStatus, ContactMessage, Destination, Nanny, NannyApplication, RegisteredAccount, Review, WaitlistEntry } from '@/lib/types'
 
 const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
 const BOOK_STATUSES: BookingStatus[] = ['pending', 'matched', 'confirmed', 'in_progress', 'completed', 'cancelled']
@@ -61,7 +61,7 @@ export default function AdminClient({
   contactMessages,
   waitlist,
   destinations,
-  people,
+  accounts,
   adminId,
   adminCatalog,
 }: {
@@ -72,7 +72,7 @@ export default function AdminClient({
   contactMessages: ContactMessage[]
   waitlist: WaitlistEntry[]
   destinations: Destination[]
-  people: Profile[]
+  accounts: RegisteredAccount[]
   adminId: string
   adminCatalog: SiteCatalog | null
 }) {
@@ -170,7 +170,7 @@ export default function AdminClient({
     { id: 'destinations', label: 'Destinations', count: destinations.length },
     { id: 'pricing', label: 'Pricing' },
     { id: 'content', label: 'Content' },
-    { id: 'team', label: 'Team', count: people.length },
+    { id: 'team', label: 'Accounts', count: accounts.length },
   ]
 
   return (
@@ -241,7 +241,7 @@ export default function AdminClient({
               </li>
               <li>
                 <button type="button" onClick={() => setTab('team')}>
-                  {people.filter(p => p.role === 'admin').length} admin{people.filter(p => p.role === 'admin').length === 1 ? '' : 's'} on the team
+                  {accounts.filter(account => account.role === 'parent').length} families, {accounts.filter(account => account.role === 'nanny').length} nannies, {accounts.filter(account => account.role === 'admin').length} admins
                 </button>
               </li>
             </ul>
@@ -420,7 +420,7 @@ export default function AdminClient({
       {tab === 'destinations' && <AdminDestinations destinations={destinations} />}
       {tab === 'pricing' && <AdminCatalog section="pricing" catalog={adminCatalog} />}
       {tab === 'content' && <AdminCatalog section="content" catalog={adminCatalog} />}
-      {tab === 'team' && <AdminTeam people={people} adminId={adminId} />}
+      {tab === 'team' && <AdminTeam accounts={accounts} adminId={adminId} />}
     </div>
   )
 }

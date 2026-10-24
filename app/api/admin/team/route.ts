@@ -27,7 +27,25 @@ export async function PATCH(request: NextRequest) {
     .eq('id', id)
     .maybeSingle()
   if (loadError) return NextResponse.json({ error: loadError.message }, { status: 500 })
-  if (!current) return NextResponse.json({ error: 'That profile does not exist yet.' }, { status: 404 })
+  if (!current) {
+    const { data: authData, error: authError } = await supabase.auth.admin.getUserById(id)
+    if (authError || !authData.user) {
+      return NextResponse.json({ error: 'That account does not exist.' }, { status: 404 })
+    }
+    const metadata = authData.user.user_metadata as { full_name?: unknown } | undefined
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: authData.user.id,
+        full_name: String(metadata?.full_name || '').slice(0, 80),
+        email: authData.user.email ?? null,
+        role,
+      })
+      .select('id, role, full_name, email')
+      .maybeSingle()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, profile: data })
+  }
 
   if (current.role === 'admin' && role !== 'admin') {
     const { count, error: countError } = await supabase
