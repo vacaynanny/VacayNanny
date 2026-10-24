@@ -21,6 +21,7 @@ import AdminDestinations from '@/components/AdminDestinations'
 import AdminCatalog from '@/components/AdminCatalog'
 import AdminNannies from '@/components/AdminNannies'
 import AdminTeam from '@/components/AdminTeam'
+import AdminDashboard from '@/components/AdminDashboard'
 import { useSiteCatalog } from '@/components/SiteCatalogProvider'
 import type { SiteCatalog } from '@/lib/catalog'
 import BookingThread from '@/components/BookingThread'
@@ -210,43 +211,51 @@ export default function AdminClient({
       </div>
 
       {tab === 'overview' && (
-        <div className="ops-grid">
-          <section className="ops-panel">
-            <h2>Needs attention</h2>
-            <ul className="ops-tasks">
-              <li><button type="button" onClick={() => setTab('applications')}>{pendingApps} application{pendingApps === 1 ? '' : 's'} waiting for review</button></li>
-              <li><button type="button" onClick={() => setTab('bookings')}>{unmatched} booking{unmatched === 1 ? '' : 's'} still need a nanny</button></li>
-              <li><button type="button" onClick={() => setTab('bookings')}>{overdue} replacement clock{overdue === 1 ? '' : 's'} overdue</button></li>
-              <li><button type="button" onClick={() => setTab('reviews')}>{pendingReviews} review{pendingReviews === 1 ? '' : 's'} waiting to publish</button></li>
-              <li><button type="button" onClick={() => setTab('inbox')}>{contactMessages.length} contact message{contactMessages.length === 1 ? '' : 's'} and {waitlist.length} waitlist signup{waitlist.length === 1 ? '' : 's'}</button></li>
-            </ul>
-          </section>
-          <section className="ops-panel">
-            <h2>Setup</h2>
-            <ul className="ops-tasks">
-              <li>
-                <button type="button" onClick={() => setTab('pricing')}>
-                  {adminCatalog?.tiers.length ? 'Pricing catalog is published' : 'Pricing catalog is not in the database yet'}
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => setTab('destinations')}>
-                  {destinations.filter(d => d.is_active).length} active destination{destinations.filter(d => d.is_active).length === 1 ? '' : 's'}
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => setTab('content')}>
-                  {adminCatalog ? 'FAQs, steps, and policies can be edited' : 'FAQ and policy tables are not ready yet'}
-                </button>
-              </li>
-              <li>
-                <button type="button" onClick={() => setTab('team')}>
-                  {accounts.filter(account => account.role === 'parent').length} families, {accounts.filter(account => account.role === 'nanny').length} nannies, {accounts.filter(account => account.role === 'admin').length} admins
-                </button>
-              </li>
-            </ul>
-          </section>
-        </div>
+        <>
+          <AdminDashboard
+            accounts={accounts}
+            applications={applications}
+            bookings={bookings}
+            onOpen={setTab}
+          />
+          <div className="ops-grid dash-lower">
+            <section className="ops-panel">
+              <h2>Needs attention</h2>
+              <ul className="ops-tasks">
+                <li><button type="button" onClick={() => setTab('applications')}>{pendingApps} application{pendingApps === 1 ? '' : 's'} waiting for review</button></li>
+                <li><button type="button" onClick={() => setTab('bookings')}>{unmatched} booking{unmatched === 1 ? '' : 's'} still need a nanny</button></li>
+                <li><button type="button" onClick={() => setTab('bookings')}>{overdue} replacement clock{overdue === 1 ? '' : 's'} overdue</button></li>
+                <li><button type="button" onClick={() => setTab('reviews')}>{pendingReviews} review{pendingReviews === 1 ? '' : 's'} waiting to publish</button></li>
+                <li><button type="button" onClick={() => setTab('inbox')}>{contactMessages.length} contact message{contactMessages.length === 1 ? '' : 's'} and {waitlist.length} waitlist signup{waitlist.length === 1 ? '' : 's'}</button></li>
+              </ul>
+            </section>
+            <section className="ops-panel">
+              <h2>Catalog</h2>
+              <ul className="ops-tasks">
+                <li>
+                  <button type="button" onClick={() => setTab('pricing')}>
+                    {adminCatalog?.tiers.length ? 'Pricing catalog is published' : 'Pricing catalog is not in the database yet'}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setTab('destinations')}>
+                    {destinations.filter(d => d.is_active).length} active destination{destinations.filter(d => d.is_active).length === 1 ? '' : 's'}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setTab('content')}>
+                    {adminCatalog ? 'FAQs, steps, and policies can be edited' : 'FAQ and policy tables are not ready yet'}
+                  </button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setTab('nannies')}>
+                    {liveNannies} live nann{liveNannies === 1 ? 'y' : 'ies'} of {nannies.length}
+                  </button>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </>
       )}
 
       {tab === 'applications' && (
