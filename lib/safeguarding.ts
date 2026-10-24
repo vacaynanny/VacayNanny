@@ -109,8 +109,11 @@ export function needsSafeguardingModule(nanny: Pick<Nanny, 'tier' | 'safeguardin
   return nanny.tier === 'gold' && nanny.safeguarding_completed_at === null
 }
 
-export function publicDailyRate(nanny: Pick<Nanny, 'tier' | 'daily_rate_kes' | 'safeguarding_completed_at'>): number {
+export function publicDailyRate(
+  nanny: Pick<Nanny, 'tier' | 'daily_rate_kes' | 'safeguarding_completed_at'>,
+  tierRates?: Partial<Record<NannyTier, number>>,
+): number {
   const shown = publicTier(nanny)
   if (shown === nanny.tier) return nanny.daily_rate_kes
-  return TIER_RATES[shown]
+  return tierRates?.[shown] || TIER_RATES[shown]
 }

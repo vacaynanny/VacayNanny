@@ -6,15 +6,20 @@ import PageShell from '@/components/PageShell'
 import NannyCard from '@/components/NannyCard'
 import BookingModal, { type BookingDefaults } from '@/components/BookingModal'
 import { CERTIFICATION_FILTERS, filterNannies } from '@/lib/match'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import { tierOptionLabel, tierRateMap } from '@/lib/catalog'
+import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Nanny } from '@/lib/types'
 
 export default function NanniesBrowser({
   initial,
   destinations,
+  kenyaNames,
   busyIds,
 }: {
   initial: Nanny[]
   destinations: string[]
+  kenyaNames: string[]
   busyIds: string[]
 }) {
   const params = useSearchParams()
@@ -29,6 +34,8 @@ export default function NanniesBrowser({
   const [book, setBook] = useState<BookingDefaults | undefined>()
   const [open, setOpen] = useState(false)
 
+  const site = useSiteCatalog()
+  const rates = tierRateMap(site.tiers)
   const filtered = useMemo(() => {
     return filterNannies(initial, {
       destination,
@@ -37,8 +44,9 @@ export default function NanniesBrowser({
       infant,
       cert,
       busyIds: checkIn && checkOut ? busyIds : [],
+      kenyaDestinations: kenyaNames,
     })
-  }, [initial, destination, tier, q, infant, cert, checkIn, checkOut, busyIds])
+  }, [initial, destination, tier, q, infant, cert, checkIn, checkOut, busyIds, kenyaNames])
 
   function apply() {
     const next = new URLSearchParams()
@@ -72,9 +80,9 @@ export default function NanniesBrowser({
             <label>Tier</label>
             <select value={tier} onChange={e => setTier(e.target.value)}>
               <option value="">Any tier</option>
-              <option value="bronze">Bronze</option>
-              <option value="silver">Silver</option>
-              <option value="gold">Gold (Elite)</option>
+              {site.tiers.map(option => (
+                <option key={option.code} value={option.code}>{tierOptionLabel(option)}</option>
+              ))}
             </select>
           </div>
           <div className="sf">
@@ -122,7 +130,8 @@ export default function NanniesBrowser({
                   nannyId: nn.id,
                   nannyName: nn.display_name,
                   destination: destination || nn.destinations[0],
-                  tier: nn.tier,
+                  tier: publicTier(nn),
+                  dailyRateKes: publicDailyRate(nn, rates),
                   checkIn,
                   checkOut,
                   infantCare: infant,

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { fallbackDestinationNames } from '@/lib/destinations'
 
 export function useDestinationNames(seed?: string[]) {
   const [fetched, setFetched] = useState<string[] | null>(null)
@@ -14,11 +13,14 @@ export function useDestinationNames(seed?: string[]) {
       .then(res => res.json())
       .then(json => {
         if (cancelled) return
-        if (!Array.isArray(json.names)) return
+        if (!Array.isArray(json.names)) {
+          setFetched([])
+          return
+        }
         setFetched(json.names.filter((name: unknown) => typeof name === 'string' && name.trim()))
       })
       .catch(() => {
-        if (!cancelled) setFetched(fallbackDestinationNames())
+        if (!cancelled) setFetched([])
       })
     return () => {
       cancelled = true
@@ -26,5 +28,5 @@ export function useDestinationNames(seed?: string[]) {
   }, [seedKey])
 
   if (seed) return seed
-  return fetched ?? fallbackDestinationNames()
+  return fetched ?? []
 }

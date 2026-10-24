@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminProfile } from '@/lib/auth'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
-import { slugify, TIER_RATES } from '@/lib/constants'
+import { slugify } from '@/lib/constants'
+import { tierDailyRate } from '@/lib/catalog-data'
 import { sendApplicationStatusEmail, sendInterviewInviteEmail } from '@/lib/email'
 import {
   formatNairobiInterview,
@@ -131,7 +132,7 @@ export async function PATCH(
         photo_url: photoUrl,
         bio: app.bio,
         tier,
-        daily_rate_kes: TIER_RATES[tier],
+        daily_rate_kes: await tierDailyRate(supabase, tier),
         county: app.county,
         town: app.town,
         destinations: app.preferred_locations?.length ? app.preferred_locations : [app.town].filter(Boolean),

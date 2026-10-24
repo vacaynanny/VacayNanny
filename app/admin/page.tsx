@@ -4,6 +4,8 @@ import PageShell from '@/components/PageShell'
 import SignOutButton from '@/components/SignOutButton'
 import AdminClient from './AdminClient'
 import { advanceDueBookings } from '@/lib/booking-ops'
+import { getAdminCatalog } from '@/lib/catalog-data'
+import type { SiteCatalog } from '@/lib/catalog'
 import type { Booking, ContactMessage, Destination, Nanny, NannyApplication, Review, WaitlistEntry } from '@/lib/types'
 
 export const metadata = { title: 'Admin — VacayNanny' }
@@ -17,6 +19,7 @@ export default async function AdminPage() {
   let contactMessages: ContactMessage[] = []
   let waitlist: WaitlistEntry[] = []
   let destinations: Destination[] = []
+  let adminCatalog: SiteCatalog | null = null
   try {
     const supabase = createServerClient()
     await advanceDueBookings(supabase)
@@ -44,6 +47,7 @@ export default async function AdminPage() {
     contactMessages = (contactRows || []) as ContactMessage[]
     waitlist = (waitlistRows || []) as WaitlistEntry[]
     destinations = (destRows || []) as Destination[]
+    adminCatalog = await getAdminCatalog(supabase)
   } catch {}
 
   return (
@@ -51,7 +55,7 @@ export default async function AdminPage() {
       <section className="page-hero">
         <div className="eyebrow">Ops</div>
         <h1>Vetting &amp; <em>bookings</em></h1>
-        <p>Open an application file to review ID photos, CoGC, certificates, and references. Approve, match families, edit destinations, check clashes, run the 2-hour replacement clock, publish family reviews, and work the contact inbox.</p>
+        <p>Open an application file to review ID photos, CoGC, certificates, and references. Approve, match families, edit destinations, update pricing and FAQs, check clashes, run the replacement clock, publish family reviews, and work the contact inbox.</p>
       </section>
       <div className="sec-inner" style={{ paddingBottom: 8 }}>
         <SignOutButton />
@@ -64,6 +68,7 @@ export default async function AdminPage() {
         contactMessages={contactMessages}
         waitlist={waitlist}
         destinations={destinations}
+        adminCatalog={adminCatalog}
       />
     </PageShell>
   )

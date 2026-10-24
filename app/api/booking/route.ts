@@ -4,7 +4,10 @@ import { notifyBookingEvent, sendBookingEmails } from '@/lib/email'
 import { createSupabaseServer } from '@/lib/supabase/server'
 import { careTypeLabel, parseCareType, quoteBooking } from '@/lib/booking'
 import { findNannyClashes, jsonFromBookingError, nannyContact, suggestMatch } from '@/lib/booking-ops'
+import { parseAddonCodes, quoteRatesFromCatalog } from '@/lib/catalog'
+import { loadQuoteCatalog } from '@/lib/catalog-data'
 import { limitRoute } from '@/lib/rate-limit'
+import { publicDailyRate } from '@/lib/safeguarding'
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,9 +69,21 @@ export async function POST(request: NextRequest) {
       if (suggested) nannyId = suggested.nanny.id
     }
 
+    const quoteCatalog = await loadQuoteCatalog(supabase)
+    const rates = quoteRatesFromCatalog(quoteCatalog)
     if (nannyId) {
-      const { data } = await supabase.from('nannies').select('daily_rate_kes').eq('id', nannyId).maybeSingle()
-      dailyRateKes = data?.daily_rate_kes ?? null
+      const { data } = await supabase
+        .from('nannies')
+        .select('tier, daily_rate_kes, safeguarding_completed_at')
+        .eq('id', nannyId)
+        .maybeSingle()
+      if (data?.tier) {
+        dailyRateKes = publicDailyRate({
+          tier: data.tier,
+          daily_rate_kes: data.daily_rate_kes,
+          safeguarding_completed_at: data.safeguarding_completed_at,
+        }, rates.tierRates)
+      }
       const contact = await nannyContact(supabase, nannyId)
       nannyName = contact.name
       nannyEmail = contact.email
@@ -82,6 +97,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const knownCare = quoteCatalog.care.some(care => care.code === careType)
+    if (quoteCatalog.persisted && quoteCatalog.care.length > 0 && !knownCare) {
+      return NextResponse.json({ error: 'That care package is not available.' }, { status: 400 })
+    }
+    const addonCodes = parseAddonCodes(body.addonCodes).filter(code => rates.addons.some(addon => addon.code === code))
     const quote = quoteBooking({
       checkIn,
       checkOut,
@@ -89,11 +109,19 @@ export async function POST(request: NextRequest) {
       tier: tier || undefined,
       nanniesNeeded,
       dailyRateKes,
+      rates,
+      addonCodes,
+      maxNannies: quoteCatalog.policies.maxNannies,
+      strictRates: quoteCatalog.persisted,
     })
+    if (quote.dailyRate <= 0 || quote.multiplier <= 0) {
+      return NextResponse.json({ error: 'Pricing is not published for this booking yet.' }, { status: 503 })
+    }
     const total = quote.total
+    const careLabel = quoteCatalog.care.find(care => care.code === careType)?.label
 
     const assigned = Boolean(nannyId)
-    const { error } = await supabase.from('bookings').insert([{
+    const row = {
       parent_id: parentId,
       nanny_id: nannyId,
       parent_name: parentName,
@@ -107,11 +135,19 @@ export async function POST(request: NextRequest) {
       nannies_needed: nanniesNeeded,
       tier: tier || null,
       notes: notes || null,
-      status: assigned ? 'matched' : 'pending',
-      nanny_response: assigned ? 'pending' : null,
+      status: assigned ? 'matched' as const : 'pending' as const,
+      nanny_response: assigned ? 'pending' as const : null,
       care_type: careType,
       total_amount_kes: total,
-    }]).select('id').maybeSingle()
+      addon_codes: addonCodes,
+    }
+    let { error } = await supabase.from('bookings').insert([row]).select('id').maybeSingle()
+    if (error && /addon_codes/.test(error.message)) {
+      const withoutAddons = { ...row }
+      Reflect.deleteProperty(withoutAddons, 'addon_codes')
+      const retry = await supabase.from('bookings').insert([withoutAddons]).select('id').maybeSingle()
+      error = retry.error
+    }
 
     if (error) {
       console.error('Supabase booking error:', error)
@@ -128,7 +164,7 @@ export async function POST(request: NextRequest) {
         destination,
         checkIn,
         checkOut,
-        careType: careTypeLabel(careType),
+        careType: careTypeLabel(careType, careLabel),
         status: 'matched',
         totalKes: total,
         note: 'Family requested this nanny',

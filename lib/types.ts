@@ -102,9 +102,10 @@ export type Booking = {
   replacement_requested_at: string | null
   replacement_fulfilled_at: string | null
   replaced_nanny_id: string | null
+  addon_codes?: string[]
   created_at: string
   updated_at?: string
-  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier' | 'daily_rate_kes'> | null
+  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier' | 'daily_rate_kes' | 'safeguarding_completed_at'> | null
   review?: Pick<Review, 'id' | 'rating' | 'body' | 'trip_label' | 'is_published' | 'created_at'> | null
 }
 

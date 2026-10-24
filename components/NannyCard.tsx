@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import MediaImage from '@/components/MediaImage'
 import { formatKes, tierClass, tierLabel } from '@/lib/constants'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import { tierLabels, tierRateMap } from '@/lib/catalog'
 import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Nanny } from '@/lib/types'
 
@@ -11,13 +13,15 @@ export default function NannyCard({
   nanny: Nanny
   onBook?: (nanny: Nanny) => void
 }) {
+  const site = useSiteCatalog()
   const shownTier = publicTier(nanny)
-  const rate = publicDailyRate(nanny)
+  const rate = publicDailyRate(nanny, tierRateMap(site.tiers))
+  const label = tierLabel(shownTier, tierLabels(site.tiers))
   return (
     <div className="nanny-card">
       <Link href={`/nannies/${nanny.slug}`} className="nc-photo" style={{ display: 'block' }}>
         <MediaImage src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} fill sizes="(max-width: 700px) 100vw, 320px" />
-        <span className={`tier-pill ${tierClass(shownTier)}`}>{tierLabel(shownTier)}</span>
+        <span className={`tier-pill ${tierClass(shownTier)}`}>{label}</span>
       </Link>
       <div className="nc-body">
         <Link href={`/nannies/${nanny.slug}`} className="nc-name" style={{ color: 'inherit', textDecoration: 'none' }}>

@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react'
 import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import { DAYS_OF_WEEK, formatKes, tierLabel } from '@/lib/constants'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import { tierLabels } from '@/lib/catalog'
 import { mergeDestinationChoices } from '@/lib/destinations'
 import type { Nanny } from '@/lib/types'
 
@@ -40,6 +42,7 @@ export default function NannyProfileEditor({
   destinationCatalog: string[]
 }) {
   const router = useRouter()
+  const labels = tierLabels(useSiteCatalog().tiers)
   const destinationChoices = useMemo(
     () => mergeDestinationChoices(destinationCatalog, nanny.destinations),
     [destinationCatalog, nanny.destinations],
@@ -119,7 +122,7 @@ export default function NannyProfileEditor({
     <form className="form-card" onSubmit={submit}>
       <h3>Public profile</h3>
       <div className="review-row"><span className="review-key">Name</span><span className="review-val">{nanny.display_name}</span></div>
-      <div className="review-row"><span className="review-key">Tier</span><span className="review-val">{tierLabel(nanny.tier)}</span></div>
+      <div className="review-row"><span className="review-key">Tier</span><span className="review-val">{tierLabel(nanny.tier, labels)}</span></div>
       <div className="review-row"><span className="review-key">Daily rate</span><span className="review-val">{formatKes(nanny.daily_rate_kes)}</span></div>
       <p className="field-hint" style={{ margin: '12px 0 16px' }}>
         Tier and rate are set by VacayNanny. You can update your photo, bio, days, destinations, and whether families can find you.

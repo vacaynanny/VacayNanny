@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import { SITE_URL } from '@/lib/constants'
+import { SiteCatalogProvider } from '@/components/SiteCatalogProvider'
+import { getSiteCatalog } from '@/lib/catalog-data'
 import './globals.css'
 import React from "react";
 
@@ -40,14 +42,17 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const catalog = await getSiteCatalog()
   return (
     <html lang="en" className={`${dmSans.variable} ${playfair.variable}`}>
-      <body className={dmSans.className}>{children}</body>
+      <body className={dmSans.className}>
+        <SiteCatalogProvider catalog={catalog}>{children}</SiteCatalogProvider>
+      </body>
     </html>
   )
 }

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { DESTINATION_IMAGES, withDestinationImage } from '@/lib/destinations'
+import { DESTINATION_IMAGES } from '@/lib/destinations'
 import { hasSupabaseConfig } from '@/lib/supabase'
 import { withTimeout } from '@/lib/withTimeout'
 import { filterNannies, type NannySearchFilters } from '@/lib/match'
@@ -22,6 +22,7 @@ function publicClient() {
   )
 }
 
+/** Demo profiles used only when Supabase is not configured. A configured database that is empty or unreachable returns no rows. */
 export const FALLBACK_NANNIES: Nanny[] = [
   {
     id: 'fallback-amara',
@@ -181,6 +182,7 @@ export const FALLBACK_NANNIES: Nanny[] = [
   },
 ]
 
+/** Demo destinations used only when Supabase is not configured. */
 export const FALLBACK_DESTINATIONS: Destination[] = [
   { id: 'd1', slug: 'diani-beach', name: 'Diani Beach', country: 'Kenya', image_url: DESTINATION_IMAGES['diani-beach'], description: null, is_active: true, sort_order: 1 },
   { id: 'd2', slug: 'malindi', name: 'Malindi', country: 'Kenya', image_url: DESTINATION_IMAGES.malindi, description: null, is_active: true, sort_order: 2 },
@@ -193,6 +195,7 @@ export const FALLBACK_DESTINATIONS: Destination[] = [
   { id: 'd9', slug: 'zanzibar', name: 'Zanzibar', country: 'Tanzania', image_url: DESTINATION_IMAGES.zanzibar, description: null, is_active: true, sort_order: 9 },
 ]
 
+/** Demo testimonials used only when Supabase is not configured. */
 export const FALLBACK_REVIEWS: Review[] = [
   {
     id: 'r1',
@@ -232,26 +235,36 @@ export const FALLBACK_REVIEWS: Review[] = [
 export type NannyFilters = NannySearchFilters
 
 export async function getNannies(filters: NannyFilters = {}): Promise<Nanny[]> {
-  const local = filterLocal(FALLBACK_NANNIES, filters)
-  if (!hasSupabaseConfig()) return local
+  if (!hasSupabaseConfig()) return filterLocal(FALLBACK_NANNIES, filters)
   return withTimeout(
     (async () => {
       try {
         const supabase = publicClient()
-        const { data, error } = await supabase
-          .from('nannies')
-          .select('*')
-          .eq('is_active', true)
-          .order('rating_avg', { ascending: false })
-        if (error || !data?.length) return local
-        return filterLocal(data as Nanny[], filters)
+        const [{ data, error }, kenya] = await Promise.all([
+          supabase.from('nannies').select('*').eq('is_active', true).order('rating_avg', { ascending: false }),
+          kenyaNamesFrom(supabase),
+        ])
+        if (error) return []
+        return filterLocal((data || []) as Nanny[], {
+          ...filters,
+          kenyaDestinations: filters.kenyaDestinations ?? kenya,
+        })
       } catch {
-        return local
+        return []
       }
     })(),
     DATA_MS,
-    local,
+    [] as Nanny[],
   )
+}
+
+async function kenyaNamesFrom(supabase: ReturnType<typeof publicClient>): Promise<string[]> {
+  const { data, error } = await supabase.from('destinations').select('name, country').eq('is_active', true)
+  if (error || !data) return []
+  return data
+    .filter(row => String(row.country || '').toLowerCase() === 'kenya')
+    .map(row => String(row.name || '').trim())
+    .filter(Boolean)
 }
 
 function filterLocal(list: Nanny[], filters: NannyFilters) {
@@ -274,14 +287,14 @@ export async function getDestinations(): Promise<Destination[]> {
           .select('*')
           .eq('is_active', true)
           .order('sort_order')
-        if (error) return FALLBACK_DESTINATIONS
-        return ((data || []) as Destination[]).map(withDestinationImage)
+        if (error) return []
+        return (data || []) as Destination[]
       } catch {
-        return FALLBACK_DESTINATIONS
+        return []
       }
     })(),
     DATA_MS,
-    FALLBACK_DESTINATIONS,
+    [] as Destination[],
   )
 }
 
@@ -297,21 +310,18 @@ export async function getReviews(limit = 6): Promise<Review[]> {
           .eq('is_published', true)
           .order('created_at', { ascending: false })
           .limit(limit)
-        if (error || !data?.length) return FALLBACK_REVIEWS
-        return data as Review[]
+        if (error) return []
+        return (data || []) as Review[]
       } catch {
-        return FALLBACK_REVIEWS
+        return []
       }
     })(),
     DATA_MS,
-    FALLBACK_REVIEWS,
+    [] as Review[],
   )
 }
 
 export async function getReviewsForNanny(nannyId: string): Promise<Review[]> {
-  if (nannyId.startsWith('fallback-')) {
-    return FALLBACK_REVIEWS.filter(r => r.nanny_id === nannyId)
-  }
   if (!hasSupabaseConfig()) {
     return FALLBACK_REVIEWS.filter(r => r.nanny_id === nannyId)
   }
