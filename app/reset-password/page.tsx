@@ -10,8 +10,8 @@ import Nav from '@/components/Nav'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const [ready, setReady] = useState(false)
-  const [hasSession, setHasSession] = useState(false)
+  const configured = hasSupabaseConfig()
+  const [phase, setPhase] = useState<'checking' | 'session' | 'none'>(configured ? 'checking' : 'none')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -19,20 +19,26 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!hasSupabaseConfig()) {
-      setReady(true)
-      return
-    }
+    if (!configured) return
     const supabase = createSupabaseBrowser()
+    let cancelled = false
     supabase.auth.getUser().then(({ data: { user } }) => {
-      setHasSession(!!user)
-      setReady(true)
+      if (cancelled) return
+      setPhase(current => (current === 'session' ? current : user ? 'session' : 'none'))
+    }).catch(() => {
+      if (!cancelled) setPhase(current => (current === 'session' ? current : 'none'))
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || session) setHasSession(true)
+      if (event === 'PASSWORD_RECOVERY' || session) setPhase('session')
     })
-    return () => subscription.unsubscribe()
-  }, [])
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [configured])
+
+  const ready = phase !== 'checking'
+  const hasSession = phase === 'session'
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()

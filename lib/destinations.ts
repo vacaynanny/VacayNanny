@@ -1,9 +1,8 @@
-import { DESTINATIONS } from '@/lib/constants'
 import type { Destination } from '@/lib/types'
 
 export const APPLY_EXTRA_DESTINATIONS = ['Anywhere in Kenya'] as const
 
-/** Photos from the original marketing site, plus real Kenya shots where that site had the wrong place. */
+/** Photos for the demo destination list. Live rows use the image URL stored by admin. */
 function unsplash(id: string) {
   return `https://images.unsplash.com/${id}?w=1600&auto=format&fit=crop&q=80`
 }
@@ -47,10 +46,6 @@ export function withDestinationImage<T extends Pick<Destination, 'slug' | 'image
 
 export function destinationNames(rows: Pick<Destination, 'name'>[]): string[] {
   return rows.map(row => row.name.trim()).filter(Boolean)
-}
-
-export function fallbackDestinationNames(): string[] {
-  return [...DESTINATIONS]
 }
 
 export function mergeDestinationChoices(catalog: string[], extras: string[] = []): string[] {

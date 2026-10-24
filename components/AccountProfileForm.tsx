@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import type { Profile } from '@/lib/types'
 
@@ -55,7 +56,7 @@ export default function AccountProfileForm({ profile }: { profile: Profile }) {
       <div className="profile-photo-row">
         <div className="profile-avatar">
           {preview && !removeAvatar
-            ? <img src={preview} alt="" />
+            ? <MediaImage src={preview} alt="" fill sizes="88px" />
             : <span>{(fullName || 'YN').slice(0, 2).toUpperCase()}</span>}
         </div>
         <div>

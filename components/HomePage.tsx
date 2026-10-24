@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
@@ -11,6 +12,10 @@ import NannyCard from '@/components/NannyCard'
 import { destinationNames } from '@/lib/destinations'
 import { destinationNannyCount } from '@/lib/data'
 import { CERTIFICATION_FILTERS } from '@/lib/match'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import { applyPolicyTokens, formatCareMultiplier, tierOptionLabel, tierRateMap } from '@/lib/catalog'
+import { formatKes } from '@/lib/constants'
+import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Destination, Nanny, Review } from '@/lib/types'
 
 function OceanCanvas() {
@@ -81,53 +86,6 @@ function OceanCanvas() {
   return <canvas ref={canvasRef} id="ocean-bg" />
 }
 
-const FAQS = [
-  {
-    q: 'Are your nannies background-checked?',
-    a: 'Yes. Every nanny on VacayNanny undergoes a <strong>multi-layer vetting process</strong> including national ID verification, police clearance certificate (CoGC), reference checks, and an in-person or video interview. Gold-tier nannies also complete a safeguarding training module.',
-  },
-  {
-    q: 'How far in advance should I book?',
-    a: 'We recommend booking at least <strong>72 hours ahead</strong> for standard placements. For peak season (December–January, Easter, August) please book 1–2 weeks in advance to guarantee your preferred tier.',
-  },
-  {
-    q: "What happens if my nanny can't make it on the day?",
-    a: 'We guarantee a <strong>replacement nanny</strong> within 2 hours or your booking fee is fully refunded. Our coverage team monitors all active placements.',
-  },
-  {
-    q: 'Do nannies travel with us to other countries?',
-    a: 'Yes! Our <strong>Gold-tier (Elite) nannies</strong> are passport-holders experienced in international travel. Travel arrangements (flights, accommodation) are at the client\'s expense. See our T&Cs for details.',
-  },
-  {
-    q: 'What are the nanny working hours?',
-    a: 'Standard shifts are <strong>8 hours</strong>. Extended shifts (up to 12 hours) and overnight care are available as add-ons. All hours beyond the package limit are charged at an agreed hourly rate.',
-  },
-  {
-    q: 'Can I request the same nanny for multiple days?',
-    a: 'Absolutely. When you book recurring days, we <strong>prioritise continuity</strong> so your children have a consistent carer. Specify this preference in the booking notes.',
-  },
-  {
-    q: 'Are nannies trained in first aid?',
-    a: 'All <strong>Silver and Gold nannies</strong> hold a valid paediatric first-aid certificate. Bronze nannies have basic first-aid knowledge. You can filter by certification on the <a href="/nannies">search page</a>.',
-  },
-  {
-    q: 'What is the cancellation policy?',
-    a: 'Full refund if cancelled <strong>48+ hours</strong> before the start time. 50% refund within 24–48 hours. No refund for cancellations under 24 hours except in cases of verified emergency.',
-  },
-  {
-    q: 'Can nannies handle infants?',
-    a: 'Yes. Indicate <strong>"Infant care"</strong> as a required skill when booking and we\'ll match you with a nanny who holds relevant newborn/infant experience certificates. Infant care is available across all tiers but most experienced at Silver+.',
-  },
-  {
-    q: 'How are nannies paid?',
-    a: 'All payments go through <strong>VacayNanny\'s secure platform</strong> — never directly to the nanny. This protects both parties and ensures our quality guarantee applies. Nannies receive timely payouts after each completed booking.',
-  },
-  {
-    q: 'Is VacayNanny available outside Kenya?',
-    a: 'Currently we operate primarily in <strong>Kenya\'s major tourism corridors</strong> (Diani, Malindi, Watamu, Nairobi, Mombasa, Lamu, and the national parks). We\'re expanding to Zanzibar, Rwanda, and South Africa — <a href="/waitlist">join the waitlist</a>.',
-  },
-]
-
 export default function HomePage({
   nannies,
   destinations,
@@ -138,9 +96,11 @@ export default function HomePage({
   reviews: Review[]
 }) {
   const router = useRouter()
+  const site = useSiteCatalog()
+  const rates = tierRateMap(site.tiers)
   const [modalOpen, setModalOpen] = useState(false)
   const [bookDefaults, setBookDefaults] = useState<BookingDefaults>({})
-  const [faqOpen, setFaqOpen] = useState<number | null>(null)
+  const [faqOpen, setFaqOpen] = useState<string | null>(null)
   const [pricingHover, setPricingHover] = useState(false)
   const [search, setSearch] = useState({ destination: '', checkIn: '', checkOut: '', tier: '', infant: '', cert: '' })
 
@@ -248,7 +208,7 @@ export default function HomePage({
             </div>
             <p className="hero-trust-line">Police-cleared &nbsp;·&nbsp; Reference verified &nbsp;·&nbsp; First-aid certified</p>
             <div className="hero-stats">
-              <div><div className="stat-num">{nannies.length}+</div><div className="stat-lbl">Vetted Nannies</div></div>
+              <div><div className="stat-num">{nannies.length}</div><div className="stat-lbl">Vetted Nannies</div></div>
               <div><div className="stat-num">{destinations.length}</div><div className="stat-lbl">Destinations</div></div>
               <div><div className="stat-num">100%</div><div className="stat-lbl">Vetted &amp; Insured</div></div>
             </div>
@@ -295,9 +255,9 @@ export default function HomePage({
                 <label>Nanny Tier</label>
                 <select value={search.tier} onChange={e => setSearch(s => ({ ...s, tier: e.target.value }))}>
                   <option value="">Any tier</option>
-                  <option value="bronze">Bronze</option>
-                  <option value="silver">Silver</option>
-                  <option value="gold">Gold (Elite)</option>
+                  {site.tiers.map(tier => (
+                    <option key={tier.code} value={tier.code}>{tierOptionLabel(tier)}</option>
+                  ))}
                 </select>
               </div>
               <div className="sf">
@@ -326,21 +286,15 @@ export default function HomePage({
             <div className="reveal">
               <div className="sec-label">Simple Process</div>
               <h2 className="sec-title">How It <em>Works</em></h2>
-              <p className="sec-sub">From search to seaside — we make holiday childcare effortless in four steps.</p>
+              <p className="sec-sub">From search to seaside — we make holiday childcare effortless.</p>
             </div>
             <div className="process-row reveal">
-              {[
-                ['Step 1', 'Search & Filter', '/images/step-1.png', 'Search on app'],
-                ['Step 2', 'Choose Your Nanny', '/images/step-2.png', 'Choose nanny'],
-                ['Step 3', 'Secure Booking', '/images/step-3.png', 'Book securely'],
-                ['Step 4', 'Enjoy Your Holiday', '/images/step-4.png', 'Enjoy holiday'],
-              ].flatMap(([label, title, src, alt], i) => [
-                i > 0 ? <div className="process-arrow" key={`a${i}`}>→</div> : null,
-                <div className="process-step" key={title}>
-                  <div className="process-step-label">{label}</div>
-                  <div className="process-step-title">{title}</div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={alt} className="process-phone-image" />
+              {site.steps.flatMap((step, i) => [
+                i > 0 ? <div className="process-arrow" key={`a${step.id}`}>→</div> : null,
+                <div className="process-step" key={step.id}>
+                  <div className="process-step-label">{step.stepLabel}</div>
+                  <div className="process-step-title">{step.title}</div>
+                  <MediaImage src={step.imageUrl} alt={step.imageAlt || step.title} width={506} height={987} className="process-phone-image" />
                 </div>,
               ])}
             </div>
@@ -356,8 +310,7 @@ export default function HomePage({
             </div>
             <div className="life-grid reveal">
               <div className="life-tile big">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80" alt="Kids having fun at the beach with a nanny" />
+                <MediaImage src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80" alt="Kids having fun at the beach with a nanny" fill sizes="(max-width: 900px) 100vw, 50vw" />
                 <div className="life-shade" /><div className="life-info"><div className="life-title">Beach days sorted</div><div className="life-sub">Nanny leads the adventure, parents breathe</div></div>
                 <div className="life-tag">With Nanny</div>
               </div>
@@ -368,8 +321,7 @@ export default function HomePage({
                 ['https://images.unsplash.com/photo-1519046904884-53103b34b206?w=900&auto=format&fit=crop&q=80', 'Kids at a resort pool', 'Pool fun', 'Safe, supervised, smiling', 'With Nanny'],
               ].map(([src, alt, title, sub, tag]) => (
                 <div className="life-tile" key={title}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={alt} />
+                  <MediaImage src={src} alt={alt} fill sizes="(max-width: 900px) 50vw, 25vw" />
                   <div className="life-shade" /><div className="life-info"><div className="life-title">{title}</div><div className="life-sub">{sub}</div></div>
                   <div className="life-tag">{tag}</div>
                 </div>
@@ -387,9 +339,16 @@ export default function HomePage({
             </div>
             <div className="nannies-grid reveal">
               {featured.map(n => (
-                <NannyCard key={n.id} nanny={n} onBook={nn => openBook({ nannyId: nn.id, nannyName: nn.display_name, destination: nn.destinations[0], tier: nn.tier })} />
+                <NannyCard key={n.id} nanny={n} onBook={nn => openBook({
+                  nannyId: nn.id,
+                  nannyName: nn.display_name,
+                  destination: nn.destinations[0],
+                  tier: publicTier(nn),
+                  dailyRateKes: publicDailyRate(nn, rates),
+                })} />
               ))}
             </div>
+            {featured.length === 0 && <p className="sec-sub">No nannies are published yet.</p>}
             <div style={{ textAlign: 'center', marginTop: '2rem' }}>
               <Link href="/nannies" className="btn-ghost">Browse all nannies →</Link>
             </div>
@@ -401,52 +360,54 @@ export default function HomePage({
             <div className="reveal" style={{ textAlign: 'center' }}>
               <div className="sec-label">Transparent Pricing</div>
               <h2 className="sec-title">Choose Your <em>Tier</em></h2>
-              <p className="sec-sub" style={{ margin: '0.9rem auto 0' }}>All plans include our 2-hour replacement guarantee and 24/7 parent support.</p>
+              <p className="sec-sub" style={{ margin: '0.9rem auto 0' }}>All plans include our {site.policies.replacementSlaHours}-hour replacement guarantee and 24/7 parent support.</p>
             </div>
+            {site.tiers.length === 0 ? (
+              <p className="sec-sub">Published rates are not available right now.</p>
+            ) : (
             <div
               className={`pricing-grid reveal${pricingHover ? ' has-hover' : ''}`}
               onMouseEnter={() => setPricingHover(true)}
               onMouseLeave={() => setPricingHover(false)}
             >
-              {[
-                { cls: 'bronze', pill: 'ENTRY', rank: 'Tier 01', name: 'Bronze', desc: 'Reliable, caring nannies for straightforward childcare needs.', price: '2,200', period: '8-hour shift · 1–2 children', feats: ['Background-checked nanny', 'Basic first-aid trained', 'Ages 3–14 care', 'Single-property coverage', 'WhatsApp parent updates', '2-hour replacement guarantee'], cta: 'Get Started', tier: 'bronze' },
-                { cls: 'silver', pill: 'POPULAR', rank: 'Tier 02', name: 'Silver', desc: 'Enhanced care with certified skills for growing families.', price: '3,200', period: '8-hour shift · Up to 3 children', feats: ['Everything in Bronze', 'Paediatric First Aid cert.', 'Infant & toddler care', 'Basic tutoring / homework', 'Swimming supervision', 'Bilingual (English + Swahili)'], cta: 'Choose Silver', tier: 'silver' },
-                { cls: 'gold', pill: 'ELITE', rank: 'Tier 03', name: 'Gold', desc: 'Premium international-standard care for discerning families.', price: '5,200', period: '8-hour shift · Up to 4 children', feats: ['Everything in Silver', 'Newborn & special-needs care', 'Passport-holder · Can travel abroad', 'Montessori / early education', 'Multilingual (3+ languages)', 'Overnight care available'], cta: 'Go Elite →', tier: 'gold' },
-              ].map(p => (
-                <div className={`price-card ${p.cls}`} key={p.name}>
+              {site.tiers.map((tier, index) => (
+                <div className={`price-card ${tier.code}`} key={tier.code}>
                   <div className="medal-stripe" />
-                  <span className="tier-pill-top">{p.pill}</span>
-                  <div className="price-rank">{p.rank}</div>
-                  <div className="price-name">{p.name}</div>
-                  <div className="price-desc">{p.desc}</div>
+                  {tier.badge ? <span className="tier-pill-top">{tier.badge}</span> : null}
+                  <div className="price-rank">Tier {String(index + 1).padStart(2, '0')}</div>
+                  <div className="price-name">{tier.cardTitle}</div>
+                  <div className="price-desc">{tier.description}</div>
                   <div className="price-divider" />
-                  <div className="price-big"><sup>KES</sup>{p.price}<sub>/day</sub></div>
-                  <div className="price-period">{p.period}</div>
-                  <ul className="price-feats">{p.feats.map(f => <li key={f}>{f}</li>)}</ul>
-                  <button className="price-btn" onClick={() => openBook({ tier: p.tier })}>{p.cta}</button>
+                  <div className="price-big"><sup>KES</sup>{tier.dailyRateKes.toLocaleString('en-KE')}<sub>/day</sub></div>
+                  <div className="price-period">{applyPolicyTokens(tier.period, site.policies)}</div>
+                  <ul className="price-feats">{tier.features.map((feature, featureIndex) => <li key={`${tier.code}-${featureIndex}`}>{applyPolicyTokens(feature, site.policies)}</li>)}</ul>
+                  <button className="price-btn" onClick={() => openBook({ tier: tier.code })}>{tier.cta}</button>
                 </div>
               ))}
             </div>
+            )}
+            {(site.care.some(care => care.code !== 'standard') || site.addons.length > 0) && (
             <div className="addons reveal">
               <h3>Optional Add-ons</h3>
               <div className="addon-chips">
-                {[
-                  ['Extended shift (12 hrs)', '+KES 1,200'],
-                  ['Overnight care', '+KES 2,500'],
-                  ['Airport transfer escort', '+KES 800'],
-                  ['Meal preparation', '+KES 500'],
-                  ['Light tutoring session', '+KES 600'],
-                  ['Activity coordination', '+KES 700'],
-                  ['Second nanny (twin/triplet care)', '+KES 3,000'],
-                  ['International travel', 'Custom quote'],
-                ].map(([name, price]) => (
-                  <div className="addon-chip" key={name}>
-                    <div className="addon-chip-name">{name}</div>
-                    <div className="addon-chip-price">{price}</div>
+                {site.care.filter(care => care.code !== 'standard').map(care => (
+                  <div className="addon-chip" key={care.code}>
+                    <div className="addon-chip-name">{care.label}</div>
+                    <div className="addon-chip-price">{formatCareMultiplier(care.multiplier)}</div>
+                  </div>
+                ))}
+                {site.addons.map(addon => (
+                  <div className="addon-chip" key={addon.id}>
+                    <div className="addon-chip-name">{addon.name}</div>
+                    {addon.description ? <div className="addon-chip-name">{addon.description}</div> : null}
+                    <div className="addon-chip-price">
+                      {addon.pricingMode === 'custom' || addon.amountKes == null ? 'Custom quote' : `+${formatKes(addon.amountKes)}`}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
+            )}
           </div>
         </section>
 
@@ -460,7 +421,7 @@ export default function HomePage({
             <div className="dest-grid reveal">
               {destinations.map(d => (
                 <Link href={`/nannies?destination=${encodeURIComponent(d.name)}`} className="dest-card reveal" key={d.id} style={{ textDecoration: 'none' }}>
-                  <img src={d.image_url || ''} alt={d.name} />
+                  {d.image_url ? <MediaImage src={d.image_url} alt={d.name} fill sizes="(max-width: 700px) 100vw, 33vw" /> : null}
                   <div className="dest-shade" />
                   <div className="dest-info">
                     <div className="dest-name">{d.name}</div>
@@ -469,9 +430,11 @@ export default function HomePage({
                 </Link>
               ))}
             </div>
+            {destinations.length === 0 && <p className="sec-sub">No destinations are published yet.</p>}
           </div>
         </section>
 
+        {reviews.length > 0 && (
         <section className="sec sec-testi">
           <div className="sec-inner">
             <div className="reveal">
@@ -485,8 +448,7 @@ export default function HomePage({
                   <p className="testi-text">{t.body}</p>
                   <div className="testi-author">
                     <div className="testi-av">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={t.avatar_url || '/images/top-right.png'} alt={t.parent_name} />
+                      <MediaImage src={t.avatar_url || '/images/top-right.png'} alt={t.parent_name} fill sizes="44px" />
                     </div>
                     <div>
                       <div className="testi-name">{t.parent_name}</div>
@@ -499,6 +461,7 @@ export default function HomePage({
             </div>
           </div>
         </section>
+        )}
 
         <section className="sec sec-faq" id="faq">
           <div className="sec-inner">
@@ -508,14 +471,14 @@ export default function HomePage({
               <p className="sec-sub" style={{ margin: '0.9rem auto 0' }}>Everything parents want to know before their first booking.</p>
             </div>
             <div className="faq-grid reveal">
-              {FAQS.map((faq, i) => (
-                <div key={i} className={`faq-item${faqOpen === i ? ' open' : ''}`} onClick={() => setFaqOpen(faqOpen === i ? null : i)}>
+              {site.faqs.map(faq => (
+                <div key={faq.id} className={`faq-item${faqOpen === faq.id ? ' open' : ''}`} onClick={() => setFaqOpen(faqOpen === faq.id ? null : faq.id)}>
                   <div className="faq-q">
-                    <span className="faq-q-text">{faq.q}</span>
+                    <span className="faq-q-text">{faq.question}</span>
                     <span className="faq-icon">+</span>
                   </div>
                   <div className="faq-a">
-                    <div className="faq-a-inner" dangerouslySetInnerHTML={{ __html: faq.a }} />
+                    <div className="faq-a-inner" style={{ whiteSpace: 'pre-wrap' }}>{applyPolicyTokens(faq.answer, site.policies)}</div>
                   </div>
                 </div>
               ))}

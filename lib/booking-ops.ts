@@ -14,6 +14,9 @@ import {
 import { notifyBookingEvent, type BookingEmailEvent } from '@/lib/email'
 import { profileOwnsBooking } from '@/lib/auth'
 import { waDigits } from '@/lib/constants'
+import { loadQuoteCatalog, type QuoteCatalog } from '@/lib/catalog-data'
+import { quoteRatesFromCatalog } from '@/lib/catalog'
+import { publicDailyRate } from '@/lib/safeguarding'
 import { bestAvailableMatch, matchRequestFromBooking, type ClashRow } from '@/lib/match'
 import type { Booking, BookingMessageRole, BookingStatus, CareType, Nanny, Profile } from '@/lib/types'
 
@@ -66,7 +69,7 @@ export type BookingMutation =
   | { action: 'refund_replacement' }
   | { action: 'auto_match' }
 
-const NANNY_EMBED = 'nannies(id, display_name, slug, photo_url, tier, daily_rate_kes)'
+const NANNY_EMBED = 'nannies(id, display_name, slug, photo_url, tier, daily_rate_kes, safeguarding_completed_at)'
 
 export async function loadBooking(supabase: SupabaseClient, id: string): Promise<Booking> {
   const { data, error } = await supabase.from('bookings').select(`*, ${NANNY_EMBED}`).eq('id', id).maybeSingle()
@@ -83,13 +86,20 @@ function normalizeBooking(row: Record<string, unknown>): Booking {
 }
 
 export async function suggestMatch(supabase: SupabaseClient, request: Parameters<typeof bestAvailableMatch>[1]) {
-  const [{ data: nannies, error: nannyErr }, { data: rows, error: bookErr }] = await Promise.all([
+  const [{ data: nannies, error: nannyErr }, { data: rows, error: bookErr }, { data: destRows, error: destErr }] = await Promise.all([
     supabase.from('nannies').select('*').eq('is_active', true),
     supabase.from('bookings').select('id, nanny_id, check_in, check_out, status, nanny_response, parent_name'),
+    supabase.from('destinations').select('name, country').eq('is_active', true),
   ])
   if (nannyErr) throw new BookingActionError(nannyErr.message, 500)
   if (bookErr) throw new BookingActionError(bookErr.message, 500)
-  return bestAvailableMatch((nannies || []) as Nanny[], request, (rows || []) as ClashRow[])
+  const kenyaDestinations = destErr
+    ? []
+    : ((destRows || []) as { name?: string; country?: string }[])
+      .filter(row => String(row.country || '').toLowerCase() === 'kenya')
+      .map(row => String(row.name || '').trim())
+      .filter(Boolean)
+  return bestAvailableMatch((nannies || []) as Nanny[], { ...request, kenyaDestinations }, (rows || []) as ClashRow[])
 }
 
 async function pickAutoMatch(supabase: SupabaseClient, bookingId: string): Promise<string> {
@@ -171,12 +181,31 @@ export async function nannyContact(supabase: SupabaseClient, nannyId: string | n
   return { name: nanny.display_name as string, email, phone }
 }
 
-async function quoteFor(supabase: SupabaseClient, booking: Booking, checkIn: string, checkOut: string, careType: CareType) {
-  let dailyRateKes: number | null = booking.nannies?.daily_rate_kes ?? null
-  if (!dailyRateKes && booking.nanny_id) {
-    const { data } = await supabase.from('nannies').select('daily_rate_kes').eq('id', booking.nanny_id).maybeSingle()
-    dailyRateKes = (data as Pick<Nanny, 'daily_rate_kes'> | null)?.daily_rate_kes ?? null
+async function quoteFor(
+  supabase: SupabaseClient,
+  booking: Booking,
+  checkIn: string,
+  checkOut: string,
+  careType: CareType,
+  catalog: QuoteCatalog,
+) {
+  let nanny = booking.nannies
+  if (booking.nanny_id && !nanny?.daily_rate_kes) {
+    const { data } = await supabase
+      .from('nannies')
+      .select('tier, daily_rate_kes, safeguarding_completed_at')
+      .eq('id', booking.nanny_id)
+      .maybeSingle()
+    if (data) nanny = { ...nanny, ...data } as Booking['nannies']
   }
+  const rates = quoteRatesFromCatalog(catalog)
+  const dailyRateKes = nanny?.tier
+    ? publicDailyRate({
+      tier: nanny.tier,
+      daily_rate_kes: nanny.daily_rate_kes,
+      safeguarding_completed_at: nanny.safeguarding_completed_at ?? null,
+    }, rates.tierRates)
+    : null
   return quoteBooking({
     checkIn,
     checkOut,
@@ -184,6 +213,10 @@ async function quoteFor(supabase: SupabaseClient, booking: Booking, checkIn: str
     tier: booking.tier,
     nanniesNeeded: booking.nannies_needed,
     dailyRateKes,
+    rates,
+    addonCodes: booking.addon_codes,
+    maxNannies: catalog.policies.maxNannies,
+    strictRates: catalog.persisted,
   })
 }
 
@@ -226,6 +259,7 @@ export async function applyBookingMutation(
     ? { action: 'assign', nannyId: await pickAutoMatch(supabase, bookingId) }
     : mutation
   const booking = await loadBooking(supabase, bookingId)
+  const catalog = await loadQuoteCatalog(supabase)
   const updates: Record<string, unknown> = {}
   let event: BookingEmailEvent
   let notifyNannyId: string | null | undefined = undefined
@@ -261,7 +295,7 @@ export async function applyBookingMutation(
       if (booking.status === 'in_progress') {
         throw new BookingActionError('An in-progress placement has to be cancelled by VacayNanny ops.')
       }
-      const refund = cancellationRefundPercent(booking.check_in)
+      const refund = cancellationRefundPercent(booking.check_in, new Date(), catalog.policies)
       updates.status = 'cancelled'
       updates.cancelled_at = new Date().toISOString()
       updates.cancellation_reason = resolved.action === 'cancel'
@@ -290,7 +324,7 @@ export async function applyBookingMutation(
         )
         if (clashes.length) throw new BookingConflictError(clashes)
       }
-      const quote = await quoteFor(supabase, booking, resolved.checkIn, resolved.checkOut, booking.care_type)
+      const quote = await quoteFor(supabase, booking, resolved.checkIn, resolved.checkOut, booking.care_type, catalog)
       updates.check_in = resolved.checkIn
       updates.check_out = resolved.checkOut
       updates.total_amount_kes = quote.total
@@ -380,7 +414,7 @@ export async function applyBookingMutation(
       switch (resolved.status) {
         case 'cancelled': {
           updates.cancelled_at = booking.cancelled_at || new Date().toISOString()
-          updates.refund_percent = booking.refund_percent ?? cancellationRefundPercent(booking.check_in)
+          updates.refund_percent = booking.refund_percent ?? cancellationRefundPercent(booking.check_in, new Date(), catalog.policies)
           updates.cancellation_reason = booking.cancellation_reason || 'Cancelled by VacayNanny'
           event = 'cancelled'
           break
@@ -440,7 +474,7 @@ export async function applyBookingMutation(
       updates.nanny_id = null
       event = 'replacement_refunded'
       notifyNannyId = null
-      note = '2-hour replacement guarantee: booking fee refunded'
+      note = `${catalog.policies.replacementSlaHours}-hour replacement guarantee: booking fee refunded`
       break
     }
     default: {

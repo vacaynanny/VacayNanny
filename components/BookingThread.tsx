@@ -31,35 +31,42 @@ export default function BookingThread({
   const [messages, setMessages] = useState<BookingMessage[]>([])
   const [text, setText] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loadedId, setLoadedId] = useState<string | null>(null)
+  const loading = loadedId !== bookingId
   const [sending, setSending] = useState(false)
   const scroller = useRef<HTMLDivElement>(null)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/booking/${bookingId}/messages`)
     const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      setError(json.error || 'Could not load messages.')
-      return
-    }
-    setError('')
-    setMessages((json.messages || []) as BookingMessage[])
+    if (!res.ok) throw new Error(json.error || 'Could not load messages.')
+    return (json.messages || []) as BookingMessage[]
   }, [bookingId])
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    load().finally(() => {
-      if (!cancelled) setLoading(false)
-    })
+    async function loadMessages() {
+      try {
+        const messages = await load()
+        if (cancelled) return
+        setError('')
+        setMessages(messages)
+        setLoadedId(bookingId)
+      } catch (err) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Could not load messages.')
+        setLoadedId(bookingId)
+      }
+    }
+    loadMessages()
     const timer = window.setInterval(() => {
-      load().catch(() => {})
+      loadMessages()
     }, 12000)
     return () => {
       cancelled = true
       window.clearInterval(timer)
     }
-  }, [load])
+  }, [load, bookingId])
 
   useEffect(() => {
     const el = scroller.current
@@ -85,7 +92,7 @@ export default function BookingThread({
       }
       setText('')
       if (json.message) setMessages(list => [...list, json.message as BookingMessage])
-      else await load()
+      else setMessages(await load())
     } finally {
       setSending(false)
     }

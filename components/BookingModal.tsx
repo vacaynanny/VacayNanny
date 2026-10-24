@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
-import { CARE_TYPES, parseCareType, quoteBooking, quoteSummary } from '@/lib/booking'
+import { parseCareType, quoteBooking, quoteSummary } from '@/lib/booking'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import { quoteRatesFromCatalog, tierOptionLabel } from '@/lib/catalog'
+import { formatKes } from '@/lib/constants'
 import { mergeDestinationChoices } from '@/lib/destinations'
 import { useDestinationNames } from '@/lib/useDestinationNames'
 import type { CareType } from '@/lib/types'
@@ -16,6 +19,7 @@ export type BookingDefaults = {
   nannyId?: string
   nannyName?: string
   infantCare?: boolean
+  dailyRateKes?: number
 }
 
 export default function BookingModal({
@@ -29,7 +33,12 @@ export default function BookingModal({
   defaults?: BookingDefaults
   destinations?: string[]
 }) {
-  const catalog = useDestinationNames(destinations)
+  const placeNames = useDestinationNames(destinations)
+  const site = useSiteCatalog()
+  const rates = quoteRatesFromCatalog(site)
+  const careOptions = site.care.length
+    ? site.care
+    : [{ code: 'standard' as const, label: `Standard (${site.policies.standardShiftHours} hours)`, hours: site.policies.standardShiftHours, multiplier: 1, hint: 'Daytime shift included in the daily rate.', sortOrder: 0, isActive: true }]
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -44,53 +53,64 @@ export default function BookingModal({
     careType: 'standard' as CareType,
     infantCare: Boolean(defaults?.infantCare),
     notes: '',
+    addonCodes: [] as string[],
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!open) return
-    setForm(f => ({
-      ...f,
-      destination: defaults?.destination || f.destination,
-      checkIn: defaults?.checkIn || f.checkIn,
-      checkOut: defaults?.checkOut || f.checkOut,
-      tier: defaults?.tier || f.tier,
-      infantCare: Boolean(defaults?.infantCare) || f.infantCare,
-      youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
-    }))
-  }, [open, defaults?.destination, defaults?.checkIn, defaults?.checkOut, defaults?.tier, defaults?.infantCare])
+  const defaultsKey = open
+    ? [
+        defaults?.destination || '',
+        defaults?.checkIn || '',
+        defaults?.checkOut || '',
+        defaults?.tier || '',
+        defaults?.infantCare ? '1' : '0',
+      ].join('\0')
+    : ''
+  const [appliedDefaults, setAppliedDefaults] = useState(defaultsKey)
+  if (appliedDefaults !== defaultsKey) {
+    setAppliedDefaults(defaultsKey)
+    if (defaultsKey) {
+      setForm(f => ({
+        ...f,
+        destination: defaults?.destination || f.destination,
+        checkIn: defaults?.checkIn || f.checkIn,
+        checkOut: defaults?.checkOut || f.checkOut,
+        tier: defaults?.tier || f.tier,
+        infantCare: Boolean(defaults?.infantCare) || f.infantCare,
+        youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
+      }))
+    }
+  }
 
   // Prefill name/email/phone from the logged-in user's profile when the modal opens.
   useEffect(() => {
     if (!open) return
+    let cancelled = false
     async function loadProfile() {
       try {
         const supabase = createSupabaseBrowser()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        if (!user || cancelled) return
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, email, phone')
           .eq('id', user.id)
           .maybeSingle()
+        if (cancelled) return
         setForm(f => ({
           ...f,
           name: f.name || String(profile?.full_name || user.user_metadata?.full_name || '').trim(),
           email: f.email || String(profile?.email || user.email || '').trim(),
           phone: f.phone || String(profile?.phone || '').trim(),
-          destination: f.destination || defaults?.destination || '',
-          checkIn: f.checkIn || defaults?.checkIn || '',
-          checkOut: f.checkOut || defaults?.checkOut || '',
-          tier: f.tier || defaults?.tier || '',
-          infantCare: f.infantCare || Boolean(defaults?.infantCare),
-          youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
         }))
       } catch {
         // Silent fail: leave fields empty so the user can type manually.
       }
     }
     loadProfile()
+    return () => {
+      cancelled = true
+    }
   }, [open])
 
   function change(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -124,6 +144,7 @@ export default function BookingModal({
           infantCare: form.infantCare,
           notes: form.notes,
           nannyId: defaults?.nannyId,
+          addonCodes: form.addonCodes,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -149,7 +170,7 @@ export default function BookingModal({
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✓</div>
             <h2 style={{ fontFamily: 'Playfair Display, serif', color: '#fff', marginBottom: '0.5rem' }}>Request Received</h2>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
-              We&apos;ll confirm your nanny within 2 hours
+              We&apos;ll confirm your nanny within {site.policies.replacementSlaHours} hours
               {form.email ? ` and email ${form.email}` : ''}.
             </p>
             <button className="btn-coral" style={{ marginTop: '1.5rem' }} onClick={onClose}>Close</button>
@@ -159,7 +180,7 @@ export default function BookingModal({
             <h2>Book Your Nanny</h2>
             <p className="modal-sub">
               {defaults?.nannyName
-                ? `Request ${defaults.nannyName}. We'll confirm availability and send a match within 2 hours.`
+                ? `Request ${defaults.nannyName}. We'll confirm availability and send a match within ${site.policies.replacementSlaHours} hours.`
                 : "Fill in your details and we'll match you with the perfect nanny."}
             </p>
             <form className="mform" onSubmit={submit}>
@@ -182,7 +203,7 @@ export default function BookingModal({
                   <label>Destination</label>
                   <select name="destination" required value={form.destination} onChange={change}>
                     <option value="">Select destination</option>
-                    {mergeDestinationChoices(catalog, [form.destination, defaults?.destination || '']).map(d => (
+                    {mergeDestinationChoices(placeNames, [form.destination, defaults?.destination || '']).map(d => (
                       <option key={d}>{d}</option>
                     ))}
                     <option>Other</option>
@@ -223,30 +244,51 @@ export default function BookingModal({
                 <div className="mfield">
                   <label>Nannies needed</label>
                   <select name="nanniesNeeded" value={form.nanniesNeeded} onChange={change}>
-                    <option value="1">1 nanny</option>
-                    <option value="2">2 nannies</option>
-                    <option value="3+">3+ (we&apos;ll call you)</option>
+                    {Array.from({ length: site.policies.maxNannies }, (_, index) => {
+                      const count = String(index + 1)
+                      return <option key={count} value={count}>{count === '1' ? '1 nanny' : `${count} nannies`}</option>
+                    })}
                   </select>
                 </div>
                 <div className="mfield">
                   <label>Nanny Tier</label>
                   <select name="tier" value={form.tier} onChange={change}>
                     <option value="">Any tier</option>
-                    <option value="bronze">Bronze (Basic)</option>
-                    <option value="silver">Silver (Professional)</option>
-                    <option value="gold">Gold (Elite)</option>
+                    {site.tiers.map(tier => (
+                      <option key={tier.code} value={tier.code}>{tierOptionLabel(tier)}</option>
+                    ))}
                   </select>
                 </div>
               </div>
               <div className="mfield" style={{ marginBottom: '1rem' }}>
                 <label>Care package</label>
                 <select name="careType" value={form.careType} onChange={change}>
-                  {CARE_TYPES.map(c => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
+                  {careOptions.map(care => (
+                    <option key={care.code} value={care.code}>{care.label}</option>
                   ))}
                 </select>
-                <p className="modal-hint">{CARE_TYPES.find(c => c.id === form.careType)?.hint}</p>
+                <p className="modal-hint">{careOptions.find(care => care.code === form.careType)?.hint}</p>
               </div>
+              {site.addons.some(addon => addon.pricingMode === 'flat') && (
+                <div className="mfield" style={{ marginBottom: '1rem' }}>
+                  <label>Add-ons</label>
+                  {site.addons.filter(addon => addon.pricingMode === 'flat' && addon.amountKes).map(addon => (
+                    <label className="force-assign" key={addon.code} style={{ marginBottom: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={form.addonCodes.includes(addon.code)}
+                        onChange={e => setForm(current => ({
+                          ...current,
+                          addonCodes: e.target.checked
+                            ? [...current.addonCodes, addon.code]
+                            : current.addonCodes.filter(code => code !== addon.code),
+                        }))}
+                      />
+                      {addon.name} (+{formatKes(addon.amountKes || 0)})
+                    </label>
+                  ))}
+                </div>
+              )}
               <label className="force-assign" style={{ marginBottom: 14 }}>
                 <input
                   type="checkbox"
@@ -267,7 +309,12 @@ export default function BookingModal({
                     careType: parseCareType(form.careType),
                     tier: form.tier,
                     nanniesNeeded: form.nanniesNeeded,
-                  }), parseCareType(form.careType))
+                    dailyRateKes: defaults?.dailyRateKes,
+                    rates,
+                    addonCodes: form.addonCodes,
+                    maxNannies: site.policies.maxNannies,
+                    strictRates: site.source === 'database',
+                  }), parseCareType(form.careType), careOptions.find(care => care.code === form.careType)?.label)
                   : 'Pick dates to see the estimate.'}
               </div>
               <div className="mfield" style={{ marginBottom: '1rem' }}>

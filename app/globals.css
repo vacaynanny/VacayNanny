@@ -275,7 +275,7 @@ footer.sec   { background:rgba(1,6,10,0.96); }
 .testi-quote { font-family:var(--font-playfair), 'Playfair Display', serif;font-size:5rem;color:rgba(255,255,255,0.06);position:absolute;top:-0.5rem;left:1.5rem;line-height:1;pointer-events:none; }
 .testi-text { font-size:0.92rem;line-height:1.76;color:rgba(255,255,255,0.7);margin-bottom:1.5rem;position:relative;z-index:1; }
 .testi-author { display:flex;align-items:center;gap:0.8rem; }
-.testi-av { width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0; }
+.testi-av { position:relative;width:44px;height:44px;border-radius:50%;overflow:hidden;flex-shrink:0; }
 .testi-av img { width:100%;height:100%;object-fit:cover; }
 .testi-name { font-weight:600;font-size:0.86rem;color:#fff; }
 .testi-trip { font-size:0.72rem;color:rgba(255,255,255,0.38);margin-top:2px; }
@@ -816,7 +816,7 @@ a.btn-submit { display:block; text-align:center; text-decoration:none; }
 .cal-muted { color:rgba(255,255,255,0.4); }
 .profile-photo-row { display:flex; gap:18px; align-items:flex-start; margin-bottom:18px; flex-wrap:wrap; }
 .profile-photo-row .upload-box { margin-bottom:0; min-width:220px; flex: 1; }
-.profile-avatar { width:88px; height:88px; border-radius:18px; overflow:hidden; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-weight:700; letter-spacing:0.5px; flex-shrink:0; }
+.profile-avatar { position:relative; width:88px; height:88px; border-radius:18px; overflow:hidden; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; font-weight:700; letter-spacing:0.5px; flex-shrink:0; }
 .profile-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
 
 /* Responsive fix for profile photo row */
@@ -831,7 +831,7 @@ button.check-item { width:100%; text-align:left; font:inherit; color:inherit; }
 @media (max-width:580px) { .earnings-grid { grid-template-columns:1fr; } }
 .vetting-docs { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
 .vetting-doc-preview {
-  display:block; width:100%; height:160px; padding:0; border:none; border-radius:12px;
+  position:relative; display:block; width:100%; height:160px; padding:0; border:none; border-radius:12px;
   overflow:hidden; background:rgba(255,255,255,0.06); cursor:pointer;
 }
 .vetting-doc-preview img { width:100%; height:100%; object-fit:cover; display:block; }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import {
   cogcLabel,
@@ -84,7 +85,7 @@ export default function AdminApplicationReview({
                 <article className="vetting-doc" key={doc.id}>
                   {image ? (
                     <button type="button" className="vetting-doc-preview" onClick={() => setPreview(doc)}>
-                      <img src={href} alt={documentKindLabel(doc.kind)} />
+                      <MediaImage src={href} alt={documentKindLabel(doc.kind)} fill sizes="280px" />
                     </button>
                   ) : (
                     <a className="vetting-doc-preview vetting-doc-file" href={href} target="_blank" rel="noopener noreferrer">
@@ -264,9 +265,12 @@ export default function AdminApplicationReview({
 
       {preview && (
         <div className="vetting-lightbox" onClick={() => setPreview(null)} role="presentation">
-          <img
+          <MediaImage
             src={fileHref(application.id, preview.id)}
             alt={documentKindLabel(preview.kind)}
+            width={1200}
+            height={1600}
+            style={{ width: 'auto', height: 'auto', maxWidth: 'min(960px, 96vw)', maxHeight: '82vh', objectFit: 'contain' }}
             onClick={e => e.stopPropagation()}
           />
           <p>{documentKindLabel(preview.kind)}</p>

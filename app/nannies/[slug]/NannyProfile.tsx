@@ -1,10 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import MediaImage from '@/components/MediaImage'
 import Link from 'next/link'
 import PageShell from '@/components/PageShell'
 import BookingModal from '@/components/BookingModal'
 import { tierClass, tierLabel } from '@/lib/constants'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import { tierLabels, tierRateMap } from '@/lib/catalog'
 import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Nanny, Review } from '@/lib/types'
 
@@ -18,10 +21,12 @@ export default function NannyProfile({
   destinations: string[]
 }) {
   const [open, setOpen] = useState(false)
+  const site = useSiteCatalog()
   const shownTier = publicTier(nanny)
-  const rate = publicDailyRate(nanny)
+  const rate = publicDailyRate(nanny, tierRateMap(site.tiers))
+  const label = tierLabel(shownTier, tierLabels(site.tiers))
   return (
-    <PageShell bookDefaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: shownTier }}>
+    <PageShell bookDefaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: shownTier, dailyRateKes: rate }}>
       <section className="page-hero" style={{ paddingBottom: 24 }}>
         <Link href="/nannies" className="nav-back" style={{ justifyContent: 'center', marginBottom: 16 }}>← All nannies</Link>
         <h1>{nanny.display_name}</h1>
@@ -29,8 +34,8 @@ export default function NannyProfile({
       </section>
       <div className="sec-inner profile-layout">
         <div className="profile-main">
-          <div className="profile-photo form-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <img src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} style={{ width: '100%', height: 360, objectFit: 'cover', display: 'block' }} />
+          <div className="profile-photo form-card" style={{ padding: 0, overflow: 'hidden', position: 'relative', height: 360 }}>
+            <MediaImage src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} fill sizes="(max-width: 900px) 100vw, 720px" style={{ objectFit: 'cover' }} />
           </div>
           <div className="form-card">
             <h3>About</h3>
@@ -62,9 +67,9 @@ export default function NannyProfile({
           )}
         </div>
         <aside className="profile-aside form-card">
-          <span className={`tier-pill ${tierClass(shownTier)}`}>{tierLabel(shownTier)}</span>
+          <span className={`tier-pill ${tierClass(shownTier)}`}>{label}</span>
           <div className="price-big" style={{ margin: '16px 0 4px' }}><sup>KES</sup>{rate.toLocaleString('en-KE')}<sub>/day</sub></div>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginBottom: 16 }}>8-hour shift · 2-hour replacement guarantee</p>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginBottom: 16 }}>{site.policies.standardShiftHours}-hour shift · {site.policies.replacementSlaHours}-hour replacement guarantee</p>
           <div className="nc-stars" style={{ marginBottom: 20 }}>
             <span>{'★'.repeat(Math.round(nanny.rating_avg || 5))}</span> {nanny.rating_avg.toFixed(1)} ({nanny.review_count} reviews)
           </div>
@@ -74,7 +79,7 @@ export default function NannyProfile({
       <BookingModal
         open={open}
         onClose={() => setOpen(false)}
-        defaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: shownTier }}
+        defaults={{ nannyId: nanny.id, nannyName: nanny.display_name, destination: nanny.destinations[0], tier: shownTier, dailyRateKes: rate }}
         destinations={destinations}
       />
     </PageShell>

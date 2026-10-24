@@ -24,7 +24,12 @@ export default async function NanniesPage({
   ])
   return (
     <Suspense>
-      <NanniesBrowser initial={nannies} destinations={destinationNames(destinations)} busyIds={busyIds} />
+      <NanniesBrowser
+        initial={nannies}
+        destinations={destinationNames(destinations)}
+        kenyaNames={destinations.filter(d => d.country.toLowerCase() === 'kenya').map(d => d.name)}
+        busyIds={busyIds}
+      />
     </Suspense>
   )
 }

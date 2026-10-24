@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { APPLICATION_FILE_MAX_BYTES } from '@/lib/application-files'
 import { APPLY_EXTRA_DESTINATIONS, mergeDestinationChoices } from '@/lib/destinations'
@@ -150,23 +150,112 @@ function UploadBox({
   )
 }
 
+type NannyDraft = {
+  firstName: string
+  lastName: string
+  dob: string
+  gender: string
+  phone: string
+  email: string
+  county: string
+  town: string
+  step: number
+}
+
+const EMPTY_DRAFT: NannyDraft = {
+  firstName: '',
+  lastName: '',
+  dob: '',
+  gender: '',
+  phone: '',
+  email: '',
+  county: '',
+  town: '',
+  step: 0,
+}
+
+const DRAFT_KEY = 'vn_nanny_form'
+const draftListeners = new Set<() => void>()
+
+function parseDraft(raw: string | null): NannyDraft {
+  if (!raw) return EMPTY_DRAFT
+  try {
+    const d = JSON.parse(raw) as Partial<NannyDraft>
+    const step = typeof d.step === 'number' && d.step >= 0 && d.step <= 7 ? d.step : 0
+    return {
+      firstName: typeof d.firstName === 'string' ? d.firstName : '',
+      lastName: typeof d.lastName === 'string' ? d.lastName : '',
+      dob: typeof d.dob === 'string' ? d.dob : '',
+      gender: typeof d.gender === 'string' ? d.gender : '',
+      phone: typeof d.phone === 'string' ? d.phone : '',
+      email: typeof d.email === 'string' ? d.email : '',
+      county: typeof d.county === 'string' ? d.county : '',
+      town: typeof d.town === 'string' ? d.town : '',
+      step,
+    }
+  } catch {
+    return EMPTY_DRAFT
+  }
+}
+
+function readDraftRaw() {
+  if (typeof window === 'undefined') return ''
+  try {
+    return sessionStorage.getItem(DRAFT_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function subscribeDraft(onStoreChange: () => void) {
+  draftListeners.add(onStoreChange)
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === DRAFT_KEY) onStoreChange()
+  }
+  window.addEventListener('storage', onStorage)
+  return () => {
+    draftListeners.delete(onStoreChange)
+    window.removeEventListener('storage', onStorage)
+  }
+}
+
+function writeDraft(next: NannyDraft) {
+  try {
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(next))
+  } catch {
+    // Private browsing can reject storage; the form still works for this visit.
+  }
+  draftListeners.forEach(listener => listener())
+}
+
+function useNannyDraft() {
+  const raw = useSyncExternalStore(subscribeDraft, readDraftRaw, () => '')
+  return useMemo(() => parseDraft(raw), [raw])
+}
+
 /* ── Main component ── */
 export default function BecomeANanny() {
-  const [step, setStep] = useState(0)
+  const draft = useNannyDraft()
+  const { firstName, lastName, dob, gender, phone, email, county, town, step } = draft
+  function patchDraft(partial: Partial<NannyDraft>) {
+    writeDraft({ ...parseDraft(readDraftRaw()), ...partial })
+  }
+  const setFirstName = (value: string) => patchDraft({ firstName: value })
+  const setLastName = (value: string) => patchDraft({ lastName: value })
+  const setDob = (value: string) => patchDraft({ dob: value })
+  const setGender = (value: string) => patchDraft({ gender: value })
+  const setPhone = (value: string) => patchDraft({ phone: value })
+  const setEmail = (value: string) => patchDraft({ email: value })
+  const setCounty = (value: string) => patchDraft({ county: value })
+  const setTown = (value: string) => patchDraft({ town: value })
+  const setStep = (value: number) => patchDraft({ step: value })
+
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
 
   // ── Form state ──
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [dob, setDob] = useState('')
-  const [gender, setGender] = useState('')
   const [countryCode, setCountryCode] = useState('+254')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [county, setCounty] = useState('')
-  const [town, setTown] = useState('')
   const [languages, setLanguages] = useState<string[]>([])
   const [bio, setBio] = useState('')
 
@@ -223,33 +312,6 @@ export default function BecomeANanny() {
   const [consent1, setConsent1] = useState(false)
   const [consent2, setConsent2] = useState(false)
   const [consent3, setConsent3] = useState(false)
-
-  // SessionStorage autosave
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem('vn_nanny_form')
-      if (saved) {
-        const d = JSON.parse(saved)
-        if (d.firstName) setFirstName(d.firstName)
-        if (d.lastName) setLastName(d.lastName)
-        if (d.dob) setDob(d.dob)
-        if (d.gender) setGender(d.gender)
-        if (d.phone) setPhone(d.phone)
-        if (d.email) setEmail(d.email)
-        if (d.county) setCounty(d.county)
-        if (d.town) setTown(d.town)
-        if (d.step) setStep(d.step)
-      }
-    } catch {}
-  }, [])
-
-  useEffect(() => {
-    try {
-      sessionStorage.setItem('vn_nanny_form', JSON.stringify({
-        firstName, lastName, dob, gender, phone, email, county, town, step
-      }))
-    } catch {}
-  }, [firstName, lastName, dob, gender, phone, email, county, town, step])
 
   function toggleArr(arr: string[], val: string, set: (a: string[]) => void) {
     set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
@@ -475,7 +537,7 @@ export default function BecomeANanny() {
       <div className="page-hero">
         <div className="eyebrow">Nanny Application</div>
         <h1>Join the <em>VacayNanny</em> Family</h1>
-        <p>Apply to become a vetted holiday childcare professional. Work at Kenya's top resorts, earn premium rates, and build a career you love.</p>
+        <p>Apply to become a vetted holiday childcare professional. Work at Kenya&apos;s top resorts, earn premium rates, and build a career you love.</p>
         <div className="tier-badges">
           <div className="tier-badge bronze"><div className="tier-dot" /> Bronze · Entry Level</div>
           <div className="tier-badge silver"><div className="tier-dot" /> Silver · Professional</div>
@@ -593,7 +655,7 @@ export default function BecomeANanny() {
                   <CheckItem
                     key={lang} label={lang}
                     checked={languages.includes(lang)}
-                    onChange={v => toggleArr(languages, lang, setLanguages)}
+                    onChange={() => toggleArr(languages, lang, setLanguages)}
                   />
                 ))}
               </div>
@@ -1030,7 +1092,7 @@ export default function BecomeANanny() {
             <div className="step-header">
               <div className="step-num">Step 7 of 8</div>
               <h2>Availability & Preferences</h2>
-              <p>Tell us when you're available and what kinds of placements you prefer.</p>
+              <p>Tell us when you&apos;re available and what kinds of placements you prefer.</p>
             </div>
 
             <div className="form-card">
@@ -1071,7 +1133,7 @@ export default function BecomeANanny() {
 
             <div className="form-card">
               <h3>Preferred Locations</h3>
-              <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px' }}>Select destinations you'd love to work in.</p>
+              <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px' }}>Select destinations you&apos;d love to work in.</p>
               <div className="check-grid">
                 {locationChoices.map(loc => (
                   <CheckItem

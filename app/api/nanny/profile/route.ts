@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentProfile } from '@/lib/auth'
 import { DAYS_OF_WEEK } from '@/lib/constants'
-import { destinationNames, fallbackDestinationNames } from '@/lib/destinations'
+import { destinationNames } from '@/lib/destinations'
 import { uploadPublicPhoto, validateProfileImage } from '@/lib/profile-media'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
 import type { Nanny } from '@/lib/types'
@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest) {
     const current = nanny as Nanny
     const { data: destRows } = await supabase.from('destinations').select('name').eq('is_active', true)
     const catalog = destinationNames((destRows || []) as { name: string }[])
-    const destSet = new Set(catalog.length ? catalog : fallbackDestinationNames())
+    const destSet = new Set(catalog)
     const availableDays = parseStringList(form.get('availableDays'), DAY_SET)
     const destinations = parseStringList(form.get('destinations'), destSet, current.destinations || [])
     if (destinations.length === 0) {

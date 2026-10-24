@@ -10,6 +10,7 @@ import {
   isReplacementOverdue,
   parseCareType,
   replacementDeadline,
+  replacementSlaMs,
   statusLabel,
 } from '@/lib/booking'
 import { nannyAssignmentWaHref } from '@/lib/constants'
@@ -17,14 +18,17 @@ import { matchLabel, matchRequestFromBooking, rankNannyMatches } from '@/lib/mat
 import AdminReviews from '@/components/AdminReviews'
 import AdminInbox from '@/components/AdminInbox'
 import AdminDestinations from '@/components/AdminDestinations'
+import AdminCatalog from '@/components/AdminCatalog'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
+import type { SiteCatalog } from '@/lib/catalog'
 import BookingThread from '@/components/BookingThread'
 import type { ApplicationStatus, BookingStatus, NannyApplication, Booking, Nanny, Review, ContactMessage, WaitlistEntry, Destination } from '@/lib/types'
 
 const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
 const BOOK_STATUSES: BookingStatus[] = ['pending', 'matched', 'confirmed', 'in_progress', 'completed', 'cancelled']
 
-function slaLabel(requestedAt: string) {
-  const ms = replacementDeadline(requestedAt).getTime() - Date.now()
+function slaLabel(requestedAt: string, slaMs: number) {
+  const ms = replacementDeadline(requestedAt, slaMs).getTime() - Date.now()
   if (ms <= 0) return 'OVERDUE — refund the booking fee'
   const mins = Math.max(1, Math.ceil(ms / 60_000))
   if (mins >= 60) return `${Math.floor(mins / 60)}h ${mins % 60}m left on replacement SLA`
@@ -39,6 +43,7 @@ export default function AdminClient({
   contactMessages,
   waitlist,
   destinations,
+  adminCatalog,
 }: {
   applications: NannyApplication[]
   bookings: Booking[]
@@ -47,20 +52,30 @@ export default function AdminClient({
   contactMessages: ContactMessage[]
   waitlist: WaitlistEntry[]
   destinations: Destination[]
+  adminCatalog: SiteCatalog | null
 }) {
   const router = useRouter()
-  const [tab, setTab] = useState<'applications' | 'bookings' | 'reviews' | 'inbox' | 'destinations'>('applications')
+  const site = useSiteCatalog()
+  const slaMs = replacementSlaMs((adminCatalog?.policies || site.policies).replacementSlaHours)
+  const [tab, setTab] = useState<'applications' | 'bookings' | 'reviews' | 'inbox' | 'destinations' | 'pricing' | 'content'>('applications')
   const [busy, setBusy] = useState<string | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [force, setForce] = useState<Record<string, boolean>>({})
 
   const rankedByBooking = useMemo(() => {
+    const kenyaDestinations = destinations
+      .filter(d => (d.country || '').toLowerCase() === 'kenya')
+      .map(d => d.name)
     const map: Record<string, ReturnType<typeof rankNannyMatches>> = {}
     for (const booking of bookings) {
-      map[booking.id] = rankNannyMatches(nannies, matchRequestFromBooking(booking), bookings)
+      map[booking.id] = rankNannyMatches(
+        nannies,
+        { ...matchRequestFromBooking(booking), kenyaDestinations },
+        bookings,
+      )
     }
     return map
-  }, [bookings, nannies])
+  }, [bookings, nannies, destinations])
 
   async function patch(id: string, body: Record<string, unknown>) {
     setBusy(id)
@@ -110,6 +125,8 @@ export default function AdminClient({
         <button className={tab === 'destinations' ? 'active' : ''} onClick={() => setTab('destinations')}>
           Destinations ({destinations.length})
         </button>
+        <button className={tab === 'pricing' ? 'active' : ''} onClick={() => setTab('pricing')}>Pricing</button>
+        <button className={tab === 'content' ? 'active' : ''} onClick={() => setTab('content')}>Content</button>
       </div>
 
       {tab === 'applications' && (
@@ -149,7 +166,7 @@ export default function AdminClient({
         <div>
           {bookings.map(b => {
             const openReplacement = isReplacementOpen(b)
-            const overdue = isReplacementOverdue(b)
+            const overdue = isReplacementOverdue(b, new Date(), slaMs)
             const ranked = rankedByBooking[b.id] || []
             const best = ranked.find(r => r.eligible)
             const assigned = nannies.find(n => n.id === b.nanny_id)
@@ -179,7 +196,7 @@ export default function AdminClient({
                 </p>
                 {openReplacement && b.replacement_requested_at && (
                   <p className={`replacement-banner${overdue ? ' overdue' : ''}`}>
-                    {slaLabel(b.replacement_requested_at)}
+                    {slaLabel(b.replacement_requested_at, slaMs)}
                   </p>
                 )}
                 {errors[b.id] && <p className="field-error-msg" style={{ marginBottom: 10 }}>{errors[b.id]}</p>}
@@ -263,6 +280,8 @@ export default function AdminClient({
       {tab === 'reviews' && <AdminReviews reviews={reviews} />}
       {tab === 'inbox' && <AdminInbox contactMessages={contactMessages} waitlist={waitlist} />}
       {tab === 'destinations' && <AdminDestinations destinations={destinations} />}
+      {tab === 'pricing' && <AdminCatalog section="pricing" catalog={adminCatalog} />}
+      {tab === 'content' && <AdminCatalog section="content" catalog={adminCatalog} />}
     </div>
   )
 }

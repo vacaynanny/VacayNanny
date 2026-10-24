@@ -10,7 +10,7 @@ export function siteUrl(path = '') {
   return `${SITE_URL}${suffix}`
 }
 
-/** Fallback names if the destinations table is unreachable. Live lists come from `public.destinations`. */
+/** Demo place names used only when Supabase is not configured. Live lists come from `public.destinations`. */
 export const DESTINATIONS = [
   'Diani Beach',
   'Malindi',
@@ -41,13 +41,16 @@ export const TIERS = [
 
 export type TierId = (typeof TIERS)[number]['id']
 
+/** Built-in tier rates used only when the pricing catalog is not available. Live quotes use `pricing_tiers`. */
 export const TIER_RATES: Record<TierId, number> = {
   bronze: 2200,
   silver: 3200,
   gold: 5200,
 }
 
-export function tierLabel(tier?: string | null) {
+export function tierLabel(tier?: string | null, labels?: Partial<Record<TierId, string>>) {
+  const id = normalizeTier(tier)
+  if (id && labels?.[id]) return labels[id]
   const t = (tier || '').toLowerCase()
   if (t === 'gold' || t === 'elite') return 'Elite'
   if (t === 'silver' || t === 'pro' || t === 'professional') return 'Pro'

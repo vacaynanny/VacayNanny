@@ -20,6 +20,8 @@ export type NannySearchFilters = {
   infant?: boolean
   cert?: string
   busyIds?: Iterable<string>
+  /** When set, "willing to travel in Kenya" matches these names. Omit only for the no-database demo list. */
+  kenyaDestinations?: string[]
 }
 
 export type MatchRequest = {
@@ -33,6 +35,7 @@ export type MatchRequest = {
   infantRequired?: boolean
   excludeBookingId?: string | null
   excludeNannyIds?: Array<string | null | undefined>
+  kenyaDestinations?: string[]
 }
 
 export type ClashRow = {
@@ -133,7 +136,7 @@ export function hasCertification(nanny: Nanny, cert: CertificationFilterId): boo
   }
 }
 
-function coversDestination(nanny: Nanny, destination?: string | null): 'exact' | 'travel' | 'none' {
+function coversDestination(nanny: Nanny, destination?: string | null, kenyaNames?: string[]): 'exact' | 'travel' | 'none' {
   const dest = String(destination || '').trim()
   if (!dest || dest.toLowerCase() === 'other' || dest.toLowerCase() === 'any') return 'exact'
   const needle = dest.toLowerCase()
@@ -142,7 +145,10 @@ function coversDestination(nanny: Nanny, destination?: string | null): 'exact' |
   }
   const travel = (nanny.willing_to_travel || '').toLowerCase()
   if (travel === 'international') return 'travel'
-  if (travel === 'kenya' && KENYA_DESTINATIONS.has(needle)) return 'travel'
+  const kenya = kenyaNames
+    ? new Set(kenyaNames.map(name => name.trim().toLowerCase()).filter(Boolean))
+    : KENYA_DESTINATIONS
+  if (travel === 'kenya' && kenya.has(needle)) return 'travel'
   return 'none'
 }
 
@@ -187,7 +193,7 @@ export function filterNannies(list: Nanny[], filters: NannySearchFilters): Nanny
   const busy = filters.busyIds ? new Set(filters.busyIds) : null
 
   return list.filter(n => {
-    if (dest && dest.toLowerCase() !== 'any' && coversDestination(n, dest) === 'none') return false
+    if (dest && dest.toLowerCase() !== 'any' && coversDestination(n, dest, filters.kenyaDestinations) === 'none') return false
     if (tier && publicTier(n) !== tier) return false
     if (filters.infant && !hasInfantCare(n)) return false
     if (cert && !hasCertification(n, cert)) return false
@@ -202,7 +208,7 @@ export function scoreNannyMatch(nanny: Nanny, request: MatchRequest, bookings: C
   const blockers: string[] = []
   let score = Math.round((nanny.rating_avg || 0) * 2)
 
-  const destCover = coversDestination(nanny, request.destination)
+  const destCover = coversDestination(nanny, request.destination, request.kenyaDestinations)
   if (destCover === 'exact') {
     score += 40
     if (request.destination) reasons.push(String(request.destination))

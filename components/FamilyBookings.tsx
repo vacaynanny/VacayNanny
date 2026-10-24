@@ -13,11 +13,13 @@ import {
   refundPolicyLabel,
   statusLabel,
 } from '@/lib/booking'
+import { useSiteCatalog } from '@/components/SiteCatalogProvider'
 import { formatKes } from '@/lib/constants'
 import type { Booking } from '@/lib/types'
 
 export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
   const router = useRouter()
+  const policies = useSiteCatalog().policies
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [rescheduleId, setRescheduleId] = useState<string | null>(null)
@@ -56,7 +58,7 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
         const canConfirm = b.status === 'matched' && Boolean(b.nanny_id) && !b.parent_confirmed_at
         const canCancel = b.status === 'pending' || b.status === 'matched' || b.status === 'confirmed'
         const canReschedule = canCancel
-        const refund = cancellationRefundPercent(b.check_in)
+        const refund = cancellationRefundPercent(b.check_in, new Date(), policies)
         const nannyName = b.nannies?.display_name
         return (
           <div className="form-card" key={b.id}>
@@ -76,7 +78,7 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
             {b.status === 'cancelled' && (
               <div className="review-row">
                 <span className="review-key">Refund</span>
-                <span className="review-val">{refundPolicyLabel(b.refund_percent ?? 0)}</span>
+                <span className="review-val">{refundPolicyLabel(b.refund_percent ?? 0, policies)}</span>
               </div>
             )}
             {(canConfirm || canReschedule || canCancel) && (
@@ -96,7 +98,7 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
               )}
               {canCancel && (
                 <button className="btn-ghost" disabled={busy === b.id} onClick={() => {
-                  if (confirm(`Cancel this booking? ${refundPolicyLabel(refund)}.`)) act(b.id, 'cancel')
+                  if (confirm(`Cancel this booking? ${refundPolicyLabel(refund, policies)}.`)) act(b.id, 'cancel')
                 }}>
                   Cancel
                 </button>

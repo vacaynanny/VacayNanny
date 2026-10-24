@@ -5,7 +5,7 @@ Full-stack holiday nanny marketplace: Next.js (Netlify) + Supabase.
 ## Local setup
 
 1. Copy `.env.example` to `.env.local` and fill in your Supabase project URL, anon key, and service role key. Add a Resend key if you want emails.
-2. In the [Supabase SQL editor](https://supabase.com/dashboard), run `supabase/schema.sql`, then `supabase/seed.sql`. Existing projects that already have the base schema should also run `supabase/booking_lifecycle.sql` and `supabase/messaging_and_automation.sql`.
+2. In the [Supabase SQL editor](https://supabase.com/dashboard), run `supabase/schema.sql`, then `supabase/content_catalog.sql`, then `supabase/seed.sql`. Existing projects should run `supabase/content_catalog.sql` as well (and, if they have not already, `supabase/booking_lifecycle.sql` and `supabase/messaging_and_automation.sql`).
 3. Under Authentication → URL configuration, set the Site URL to `https://www.vacaynanny.net` and add `https://www.vacaynanny.net/auth/callback`. Password-reset emails reuse that callback (`?next=/reset-password`).
 4. After you create the first user, promote them:
 
@@ -19,6 +19,8 @@ update public.profiles set role = 'admin' where email = 'you@email.com';
 
 - `profiles` — parent / nanny / admin roles (created on signup)
 - `destinations` — public coverage map
+- `pricing_tiers`, `care_offerings`, `pricing_addons` — the rates used on the homepage and in booking quotes
+- `faqs`, `homepage_steps`, `business_policies` — questions, process steps, and the refund / replacement rules
 - `nanny_applications`, `nanny_references`, `nanny_documents` — 8-step apply flow + private file storage
 - `nannies` — live profiles published when an application is approved
 - `bookings` — family requests, matching, status
