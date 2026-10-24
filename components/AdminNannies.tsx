@@ -4,14 +4,39 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatKes, tierLabel } from '@/lib/constants'
-import type { Nanny } from '@/lib/types'
+import type { Nanny, RegisteredAccount } from '@/lib/types'
 
-export default function AdminNannies({ nannies }: { nannies: Nanny[] }) {
+export default function AdminNannies({ nannies, accounts }: { nannies: Nanny[]; accounts: RegisteredAccount[] }) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [visibility, setVisibility] = useState<'all' | 'live' | 'hidden'>('all')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+
+  const waiting = useMemo(
+    () => accounts.filter(account => account.role === 'nanny' && !nannies.some(nanny => nanny.user_id === account.id)),
+    [accounts, nannies],
+  )
+
+  async function approve(userId: string) {
+    setBusy(userId)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/nannies/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(json.error || 'Could not approve this profile.')
+        return
+      }
+      router.refresh()
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -44,19 +69,42 @@ export default function AdminNannies({ nannies }: { nannies: Nanny[] }) {
     }
   }
 
-  if (nannies.length === 0) {
-    return (
-      <div className="ops-empty">
-        <h3>No live nannies yet</h3>
-        <p>Approving an application publishes a profile here. Families only see profiles marked live.</p>
-      </div>
-    )
-  }
-
   return (
     <div className="ops-stack">
+      {waiting.length > 0 && (
+        <section className="ops-stack">
+          <h2 className="dash-title">Waiting for approval</h2>
+          <p className="ops-note">These people registered as nannies. Approving publishes a profile families can book.</p>
+          {waiting.map(account => (
+            <article className="ops-card" key={account.id}>
+              <header className="ops-card-head">
+                <div>
+                  <h3>{account.fullName || 'Unnamed account'}</h3>
+                  <p>{account.email || 'No email'}</p>
+                </div>
+                <span className="ops-pill">Waiting</span>
+              </header>
+              <div className="ops-card-actions">
+                <button className="btn-coral" disabled={busy === account.id} onClick={() => approve(account.id)}>
+                  {busy === account.id ? 'Approving…' : 'Approve and publish'}
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+      {nannies.length === 0 && waiting.length === 0 && (
+        <div className="ops-empty">
+          <h3>No live nannies yet</h3>
+          <p>When someone registers as a nanny, they appear here for approval. Approving publishes the profile families can book.</p>
+        </div>
+      )}
+      {error && <p className="field-error-msg">{error}</p>}
+      {nannies.length > 0 && (
+      <>
       <div className="ops-filters">
         <input
+          type="text"
           className="ops-search"
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -72,7 +120,6 @@ export default function AdminNannies({ nannies }: { nannies: Nanny[] }) {
           <option value="hidden">Hidden</option>
         </select>
       </div>
-      {error && <p className="field-error-msg">{error}</p>}
       {shown.length === 0 && <p className="ops-note">No profiles match that search.</p>}
       {shown.map(nanny => (
         <article className="ops-card" key={nanny.id}>
@@ -96,6 +143,8 @@ export default function AdminNannies({ nannies }: { nannies: Nanny[] }) {
           </div>
         </article>
       ))}
+      </>
+      )}
     </div>
   )
 }

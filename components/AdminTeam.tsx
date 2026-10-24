@@ -34,7 +34,15 @@ function when(iso: string | null) {
   return date.toLocaleString('en-KE', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-export default function AdminTeam({ accounts, adminId }: { accounts: RegisteredAccount[]; adminId: string }) {
+export default function AdminTeam({
+  accounts,
+  adminId,
+  publishedUserIds,
+}: {
+  accounts: RegisteredAccount[]
+  adminId: string
+  publishedUserIds: string[]
+}) {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all')
@@ -49,6 +57,26 @@ export default function AdminTeam({ accounts, adminId }: { accounts: RegisteredA
       return [account.fullName, account.email, account.phone].some(part => (part || '').toLowerCase().includes(q))
     })
   }, [accounts, query, roleFilter])
+
+  async function approve(userId: string) {
+    setBusy(userId)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/nannies/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(json.error || 'Could not approve this profile.')
+        return
+      }
+      router.refresh()
+    } finally {
+      setBusy(null)
+    }
+  }
 
   async function setRole(id: string, role: UserRole) {
     setBusy(id)
@@ -82,32 +110,35 @@ export default function AdminTeam({ accounts, adminId }: { accounts: RegisteredA
   return (
     <div className="ops-stack">
       <p className="ops-note">Every login, including people who registered before profiles existed. Family and nanny come from the account role.</p>
-      <div className="ops-filter-pills" role="tablist" aria-label="Account type">
-        {FILTERS.map(filter => {
-          const count = filter.id === 'all'
-            ? accounts.length
-            : accounts.filter(account => account.role === filter.id).length
-          return (
-            <button
-              key={filter.id}
-              type="button"
-              role="tab"
-              aria-selected={roleFilter === filter.id}
-              className={roleFilter === filter.id ? 'active' : ''}
-              onClick={() => setRoleFilter(filter.id)}
-            >
-              {filter.label} ({count})
-            </button>
-          )
-        })}
+      <div className="ops-filters">
+        <div className="ops-filter-pills" role="tablist" aria-label="Account type">
+          {FILTERS.map(filter => {
+            const count = filter.id === 'all'
+              ? accounts.length
+              : accounts.filter(account => account.role === filter.id).length
+            return (
+              <button
+                key={filter.id}
+                type="button"
+                role="tab"
+                aria-selected={roleFilter === filter.id}
+                className={roleFilter === filter.id ? 'active' : ''}
+                onClick={() => setRoleFilter(filter.id)}
+              >
+                {filter.label} ({count})
+              </button>
+            )
+          })}
+        </div>
+        <input
+          type="text"
+          className="ops-search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search name or email"
+          aria-label="Search accounts"
+        />
       </div>
-      <input
-        className="ops-search"
-        value={query}
-        onChange={e => setQuery(e.target.value)}
-        placeholder="Search name or email"
-        aria-label="Search accounts"
-      />
       {error && <p className="field-error-msg">{error}</p>}
       {shown.length === 0 && <p className="ops-note">No accounts match that search.</p>}
       {shown.map(account => (
@@ -122,6 +153,13 @@ export default function AdminTeam({ accounts, adminId }: { accounts: RegisteredA
           <p className="ops-meta">Registered {when(account.registeredAt)}</p>
           <p className="ops-meta">Last login {when(account.lastSignInAt)}</p>
           {!account.hasProfile && <p className="ops-note">No saved profile yet. Choosing a role here creates one.</p>}
+          {account.role === 'nanny' && !publishedUserIds.includes(account.id) && (
+            <div className="ops-card-actions">
+              <button className="btn-coral" disabled={busy === account.id} onClick={() => approve(account.id)}>
+                {busy === account.id ? 'Approving…' : 'Approve and publish'}
+              </button>
+            </div>
+          )}
           <label className="ops-status-field">
             <span>Role</span>
             <select
