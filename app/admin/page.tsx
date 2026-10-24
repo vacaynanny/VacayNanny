@@ -6,12 +6,12 @@ import AdminClient from './AdminClient'
 import { advanceDueBookings } from '@/lib/booking-ops'
 import { getAdminCatalog } from '@/lib/catalog-data'
 import type { SiteCatalog } from '@/lib/catalog'
-import type { Booking, ContactMessage, Destination, Nanny, NannyApplication, Review, WaitlistEntry } from '@/lib/types'
+import type { Booking, ContactMessage, Destination, Nanny, NannyApplication, Profile, Review, WaitlistEntry } from '@/lib/types'
 
 export const metadata = { title: 'Admin — VacayNanny' }
 
 export default async function AdminPage() {
-  await requireProfile(['admin'])
+  const admin = await requireProfile(['admin'])
   let applications: NannyApplication[] = []
   let bookings: Booking[] = []
   let nannies: Nanny[] = []
@@ -19,6 +19,7 @@ export default async function AdminPage() {
   let contactMessages: ContactMessage[] = []
   let waitlist: WaitlistEntry[] = []
   let destinations: Destination[] = []
+  let people: Profile[] = []
   let adminCatalog: SiteCatalog | null = null
   try {
     const supabase = createServerClient()
@@ -31,6 +32,7 @@ export default async function AdminPage() {
       { data: contactRows },
       { data: waitlistRows },
       { data: destRows },
+      { data: profileRows },
     ] = await Promise.all([
       supabase.from('nanny_applications').select('*').order('created_at', { ascending: false }),
       supabase.from('bookings').select('*').order('created_at', { ascending: false }),
@@ -39,6 +41,7 @@ export default async function AdminPage() {
       supabase.from('contact_messages').select('*').order('created_at', { ascending: false }),
       supabase.from('waitlist').select('*').order('created_at', { ascending: false }),
       supabase.from('destinations').select('*').order('sort_order').order('name'),
+      supabase.from('profiles').select('id, role, full_name, email, phone, avatar_url, created_at').order('full_name'),
     ])
     applications = (apps || []) as NannyApplication[]
     bookings = (books || []) as Booking[]
@@ -47,29 +50,34 @@ export default async function AdminPage() {
     contactMessages = (contactRows || []) as ContactMessage[]
     waitlist = (waitlistRows || []) as WaitlistEntry[]
     destinations = (destRows || []) as Destination[]
+    people = (profileRows || []) as Profile[]
     adminCatalog = await getAdminCatalog(supabase)
   } catch {}
 
   return (
     <PageShell>
-      <section className="page-hero">
-        <div className="eyebrow">Ops</div>
-        <h1>Vetting &amp; <em>bookings</em></h1>
-        <p>Open an application file to review ID photos, CoGC, certificates, and references. Approve, match families, edit destinations, update pricing and FAQs, check clashes, run the replacement clock, publish family reviews, and work the contact inbox.</p>
-      </section>
-      <div className="sec-inner" style={{ paddingBottom: 8 }}>
-        <SignOutButton />
+      <div className="ops">
+        <header className="ops-top">
+          <div>
+            <p className="account-kicker">Ops</p>
+            <h1>Admin <em>desk</em></h1>
+            <p>Vet applications, match trips, publish nannies, and edit the catalog.</p>
+          </div>
+          <SignOutButton />
+        </header>
+        <AdminClient
+          applications={applications}
+          bookings={bookings}
+          nannies={nannies}
+          reviews={reviews}
+          contactMessages={contactMessages}
+          waitlist={waitlist}
+          destinations={destinations}
+          people={people}
+          adminId={admin.id}
+          adminCatalog={adminCatalog}
+        />
       </div>
-      <AdminClient
-        applications={applications}
-        bookings={bookings}
-        nannies={nannies}
-        reviews={reviews}
-        contactMessages={contactMessages}
-        waitlist={waitlist}
-        destinations={destinations}
-        adminCatalog={adminCatalog}
-      />
     </PageShell>
   )
 }

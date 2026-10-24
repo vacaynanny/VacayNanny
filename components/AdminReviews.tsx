@@ -31,7 +31,12 @@ export default function AdminReviews({ reviews }: { reviews: Review[] }) {
   }
 
   if (reviews.length === 0) {
-    return <p style={{ color: 'rgba(255,255,255,0.5)' }}>No family reviews yet.</p>
+    return (
+      <div className="ops-empty">
+        <h3>No family reviews yet</h3>
+        <p>A review appears here after a completed placement. Publish it to show the quote on the nanny profile.</p>
+      </div>
+    )
   }
 
   return (

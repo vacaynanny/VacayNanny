@@ -67,7 +67,10 @@ export default function AdminInbox({
       {pane === 'contact' && (
         <div>
           {contactMessages.length === 0 && (
-            <p style={{ color: 'rgba(255,255,255,0.5)' }}>No contact messages yet.</p>
+            <div className="ops-empty">
+              <h3>No contact messages</h3>
+              <p>Messages from the contact form land here. Reply by email, then remove the ones you have handled.</p>
+            </div>
           )}
           {contactMessages.map(m => (
             <div className="form-card" key={m.id}>
@@ -104,7 +107,10 @@ export default function AdminInbox({
       {pane === 'waitlist' && (
         <div>
           {waitlist.length === 0 && (
-            <p style={{ color: 'rgba(255,255,255,0.5)' }}>No waitlist signups yet.</p>
+            <div className="ops-empty">
+              <h3>No waitlist signups</h3>
+              <p>Families who want coverage outside the current destinations show up here.</p>
+            </div>
           )}
           {byRegion.length > 0 && (
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: 16 }}>
