@@ -1,22 +1,33 @@
 import type { Metadata } from 'next'
-import { DM_Sans, Playfair_Display } from 'next/font/google'
+import localFont from 'next/font/local'
 import { SITE_URL } from '@/lib/constants'
 import './globals.css'
 import React from "react";
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+const dmSans = localFont({
+  src: './fonts/dm-sans-latin-standard-normal.woff2',
+  weight: '100 1000',
   variable: '--font-dm-sans',
   display: 'swap',
+  adjustFontFallback: 'Arial',
 })
 
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['700', '800', '900'],
-  style: ['normal', 'italic'],
+const playfair = localFont({
+  src: [
+    {
+      path: './fonts/playfair-display-latin-wght-normal.woff2',
+      weight: '400 900',
+      style: 'normal',
+    },
+    {
+      path: './fonts/playfair-display-latin-wght-italic.woff2',
+      weight: '400 900',
+      style: 'italic',
+    },
+  ],
   variable: '--font-playfair',
   display: 'swap',
+  adjustFontFallback: 'Times New Roman',
 })
 
 export const metadata: Metadata = {

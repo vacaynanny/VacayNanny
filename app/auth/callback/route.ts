@@ -17,7 +17,6 @@ export async function GET(request: Request) {
   const type = searchParams.get('type') as EmailOtpType | null
   const next = safeNext(searchParams.get('next'))
   const authError = searchParams.get('error')
-  const errorDescription = searchParams.get('error_description')
 
   // Handle auth errors with user-friendly messages
   if (authError) {

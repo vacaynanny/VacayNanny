@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import type { Destination } from '@/lib/types'
 
@@ -159,7 +160,9 @@ export default function AdminDestinations({ destinations }: { destinations: Dest
               <span className="review-val">{d.is_active ? 'Live' : 'Hidden'}</span>
             </div>
             {form.image_url && (
-              <img src={form.image_url} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 12, margin: '12px 0' }} />
+              <div style={{ position: 'relative', width: '100%', height: 140, borderRadius: 12, overflow: 'hidden', margin: '12px 0' }}>
+                <MediaImage src={form.image_url} alt="" fill sizes="640px" style={{ objectFit: 'cover' }} />
+              </div>
             )}
             <div className="mrow">
               <div className="field">

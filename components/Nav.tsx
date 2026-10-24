@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createSupabaseBrowser } from '@/lib/supabase/browser'
@@ -18,27 +18,27 @@ function hasClientAuthCookie() {
   })
 }
 
+function subscribeScroll(onStoreChange: () => void) {
+  window.addEventListener('scroll', onStoreChange, { passive: true })
+  return () => window.removeEventListener('scroll', onStoreChange)
+}
+
+function subscribeFocus(onStoreChange: () => void) {
+  window.addEventListener('focus', onStoreChange)
+  return () => window.removeEventListener('focus', onStoreChange)
+}
+
 export default function Nav({ onBook }: NavProps) {
-  const [scrolled, setScrolled] = useState(false)
+  const scrolled = useSyncExternalStore(subscribeScroll, () => window.scrollY > 40, () => false)
+  const hasCookie = useSyncExternalStore(subscribeFocus, hasClientAuthCookie, () => false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [signedIn, setSignedIn] = useState(false)
   const [role, setRole] = useState<string | null>(null)
   const pathname = usePathname()
 
   useEffect(() => {
-    function onScroll() { setScrolled(window.scrollY > 40) }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
     // Skip network when nobody is signed in — keeps login/signup snappy
-    if (!hasSupabaseConfig() || !hasClientAuthCookie()) {
-      setSignedIn(false)
-      setRole(null)
-      return
-    }
+    if (!hasSupabaseConfig() || !hasCookie) return
     let cancelled = false
     const supabase = createSupabaseBrowser()
     const timer = window.setTimeout(() => {
@@ -78,10 +78,12 @@ export default function Nav({ onBook }: NavProps) {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [pathname])
+  }, [pathname, hasCookie])
 
+  const showSignedIn = hasCookie && signedIn
+  const visibleRole = hasCookie ? role : null
   const hash = (id: string) => (pathname === '/' ? `#${id}` : `/#${id}`)
-  const accountHref = role === 'admin' ? '/admin' : role === 'nanny' ? '/nanny' : '/account'
+  const accountHref = visibleRole === 'admin' ? '/admin' : visibleRole === 'nanny' ? '/nanny' : '/account'
 
   return (
     <nav className={`nav${scrolled ? ' scrolled' : ''}`}>
@@ -99,7 +101,7 @@ export default function Nav({ onBook }: NavProps) {
         <li><Link href={hash('pricing')} onClick={() => setMenuOpen(false)}>Pricing</Link></li>
         <li><Link href={hash('destinations')} onClick={() => setMenuOpen(false)}>Destinations</Link></li>
         <li><Link href={hash('faq')} onClick={() => setMenuOpen(false)}>FAQ</Link></li>
-        {signedIn ? (
+        {showSignedIn ? (
           <li><Link href={accountHref} onClick={() => setMenuOpen(false)}>Dashboard</Link></li>
         ) : (
           <li><Link href="/login" onClick={() => setMenuOpen(false)}>Sign in</Link></li>

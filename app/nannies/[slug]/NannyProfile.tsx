@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import MediaImage from '@/components/MediaImage'
 import Link from 'next/link'
 import PageShell from '@/components/PageShell'
 import BookingModal from '@/components/BookingModal'
@@ -29,8 +30,8 @@ export default function NannyProfile({
       </section>
       <div className="sec-inner profile-layout">
         <div className="profile-main">
-          <div className="profile-photo form-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <img src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} style={{ width: '100%', height: 360, objectFit: 'cover', display: 'block' }} />
+          <div className="profile-photo form-card" style={{ padding: 0, overflow: 'hidden', position: 'relative', height: 360 }}>
+            <MediaImage src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} fill sizes="(max-width: 900px) 100vw, 720px" style={{ objectFit: 'cover' }} />
           </div>
           <div className="form-card">
             <h3>About</h3>

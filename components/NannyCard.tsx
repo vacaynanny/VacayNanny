@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import MediaImage from '@/components/MediaImage'
 import { formatKes, tierClass, tierLabel } from '@/lib/constants'
 import { publicDailyRate, publicTier } from '@/lib/safeguarding'
 import type { Nanny } from '@/lib/types'
@@ -15,7 +16,7 @@ export default function NannyCard({
   return (
     <div className="nanny-card">
       <Link href={`/nannies/${nanny.slug}`} className="nc-photo" style={{ display: 'block' }}>
-        <img src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} />
+        <MediaImage src={nanny.photo_url || '/images/top-right.png'} alt={nanny.display_name} fill sizes="(max-width: 700px) 100vw, 320px" />
         <span className={`tier-pill ${tierClass(shownTier)}`}>{tierLabel(shownTier)}</span>
       </Link>
       <div className="nc-body">

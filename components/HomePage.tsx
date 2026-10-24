@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import Nav from '@/components/Nav'
 import Footer from '@/components/Footer'
@@ -339,8 +340,7 @@ export default function HomePage({
                 <div className="process-step" key={title}>
                   <div className="process-step-label">{label}</div>
                   <div className="process-step-title">{title}</div>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={alt} className="process-phone-image" />
+                  <MediaImage src={src} alt={alt} width={506} height={987} className="process-phone-image" />
                 </div>,
               ])}
             </div>
@@ -356,8 +356,7 @@ export default function HomePage({
             </div>
             <div className="life-grid reveal">
               <div className="life-tile big">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80" alt="Kids having fun at the beach with a nanny" />
+                <MediaImage src="https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80" alt="Kids having fun at the beach with a nanny" fill sizes="(max-width: 900px) 100vw, 50vw" />
                 <div className="life-shade" /><div className="life-info"><div className="life-title">Beach days sorted</div><div className="life-sub">Nanny leads the adventure, parents breathe</div></div>
                 <div className="life-tag">With Nanny</div>
               </div>
@@ -368,8 +367,7 @@ export default function HomePage({
                 ['https://images.unsplash.com/photo-1519046904884-53103b34b206?w=900&auto=format&fit=crop&q=80', 'Kids at a resort pool', 'Pool fun', 'Safe, supervised, smiling', 'With Nanny'],
               ].map(([src, alt, title, sub, tag]) => (
                 <div className="life-tile" key={title}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={alt} />
+                  <MediaImage src={src} alt={alt} fill sizes="(max-width: 900px) 50vw, 25vw" />
                   <div className="life-shade" /><div className="life-info"><div className="life-title">{title}</div><div className="life-sub">{sub}</div></div>
                   <div className="life-tag">{tag}</div>
                 </div>
@@ -460,7 +458,7 @@ export default function HomePage({
             <div className="dest-grid reveal">
               {destinations.map(d => (
                 <Link href={`/nannies?destination=${encodeURIComponent(d.name)}`} className="dest-card reveal" key={d.id} style={{ textDecoration: 'none' }}>
-                  <img src={d.image_url || ''} alt={d.name} />
+                  {d.image_url ? <MediaImage src={d.image_url} alt={d.name} fill sizes="(max-width: 700px) 100vw, 33vw" /> : null}
                   <div className="dest-shade" />
                   <div className="dest-info">
                     <div className="dest-name">{d.name}</div>
@@ -485,8 +483,7 @@ export default function HomePage({
                   <p className="testi-text">{t.body}</p>
                   <div className="testi-author">
                     <div className="testi-av">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={t.avatar_url || '/images/top-right.png'} alt={t.parent_name} />
+                      <MediaImage src={t.avatar_url || '/images/top-right.png'} alt={t.parent_name} fill sizes="44px" />
                     </div>
                     <div>
                       <div className="testi-name">{t.parent_name}</div>

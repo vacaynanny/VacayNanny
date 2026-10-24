@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import MediaImage from '@/components/MediaImage'
 import { useRouter } from 'next/navigation'
 import { DAYS_OF_WEEK, formatKes, tierLabel } from '@/lib/constants'
 import { mergeDestinationChoices } from '@/lib/destinations'
@@ -127,7 +128,7 @@ export default function NannyProfileEditor({
       <div className="profile-photo-row">
         <div className="profile-avatar">
           {preview && !removePhoto
-            ? <img src={preview} alt="" />
+            ? <MediaImage src={preview} alt="" fill sizes="88px" />
             : <span>{nanny.display_name.slice(0, 2).toUpperCase()}</span>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>

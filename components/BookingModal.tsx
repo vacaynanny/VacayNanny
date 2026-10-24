@@ -47,50 +47,60 @@ export default function BookingModal({
   })
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!open) return
-    setForm(f => ({
-      ...f,
-      destination: defaults?.destination || f.destination,
-      checkIn: defaults?.checkIn || f.checkIn,
-      checkOut: defaults?.checkOut || f.checkOut,
-      tier: defaults?.tier || f.tier,
-      infantCare: Boolean(defaults?.infantCare) || f.infantCare,
-      youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
-    }))
-  }, [open, defaults?.destination, defaults?.checkIn, defaults?.checkOut, defaults?.tier, defaults?.infantCare])
+  const defaultsKey = open
+    ? [
+        defaults?.destination || '',
+        defaults?.checkIn || '',
+        defaults?.checkOut || '',
+        defaults?.tier || '',
+        defaults?.infantCare ? '1' : '0',
+      ].join('\0')
+    : ''
+  const [appliedDefaults, setAppliedDefaults] = useState(defaultsKey)
+  if (appliedDefaults !== defaultsKey) {
+    setAppliedDefaults(defaultsKey)
+    if (defaultsKey) {
+      setForm(f => ({
+        ...f,
+        destination: defaults?.destination || f.destination,
+        checkIn: defaults?.checkIn || f.checkIn,
+        checkOut: defaults?.checkOut || f.checkOut,
+        tier: defaults?.tier || f.tier,
+        infantCare: Boolean(defaults?.infantCare) || f.infantCare,
+        youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
+      }))
+    }
+  }
 
   // Prefill name/email/phone from the logged-in user's profile when the modal opens.
   useEffect(() => {
     if (!open) return
+    let cancelled = false
     async function loadProfile() {
       try {
         const supabase = createSupabaseBrowser()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        if (!user || cancelled) return
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, email, phone')
           .eq('id', user.id)
           .maybeSingle()
+        if (cancelled) return
         setForm(f => ({
           ...f,
           name: f.name || String(profile?.full_name || user.user_metadata?.full_name || '').trim(),
           email: f.email || String(profile?.email || user.email || '').trim(),
           phone: f.phone || String(profile?.phone || '').trim(),
-          destination: f.destination || defaults?.destination || '',
-          checkIn: f.checkIn || defaults?.checkIn || '',
-          checkOut: f.checkOut || defaults?.checkOut || '',
-          tier: f.tier || defaults?.tier || '',
-          infantCare: f.infantCare || Boolean(defaults?.infantCare),
-          youngestAge: f.youngestAge || (defaults?.infantCare ? 'Under 1 year' : ''),
         }))
       } catch {
         // Silent fail: leave fields empty so the user can type manually.
       }
     }
     loadProfile()
+    return () => {
+      cancelled = true
+    }
   }, [open])
 
   function change(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {

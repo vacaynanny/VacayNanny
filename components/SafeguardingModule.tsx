@@ -17,7 +17,7 @@ export default function SafeguardingModule({ alreadyComplete }: { alreadyComplet
   const [passed, setPassed] = useState(alreadyComplete)
 
   const inQuiz = step >= SAFEGUARDING_MODULES.length
-  const module = !inQuiz ? SAFEGUARDING_MODULES[step] : null
+  const lesson = !inQuiz ? SAFEGUARDING_MODULES[step] : null
 
   async function submitQuiz(e: React.FormEvent) {
     e.preventDefault()
@@ -58,11 +58,11 @@ export default function SafeguardingModule({ alreadyComplete }: { alreadyComplet
 
   return (
     <div className="form-card">
-      {!inQuiz && module && (
+      {!inQuiz && lesson && (
         <>
           <p className="safeguard-step">Module {step + 1} of {SAFEGUARDING_MODULES.length}</p>
-          <h3>{module.title}</h3>
-          <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 20 }}>{module.body}</p>
+          <h3>{lesson.title}</h3>
+          <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 20 }}>{lesson.body}</p>
           <div className="booking-actions">
             {step > 0 && (
               <button className="btn-ghost" type="button" onClick={() => setStep(s => s - 1)}>Back</button>
