@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import PageShell from '@/components/PageShell'
-import { WHATSAPP_DISPLAY, SUPPORT_EMAIL, waLink } from '@/lib/constants'
+import { SUPPORT_EMAIL, WHATSAPP_DISPLAY, waLink } from '@/lib/constants'
 
 export default function ContactPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
@@ -34,40 +34,67 @@ export default function ContactPage() {
 
   return (
     <PageShell>
-      <section className="page-hero">
-        <div className="eyebrow">Hello</div>
-        <h1>Talk to <em>VacayNanny</em></h1>
-        <p>WhatsApp {WHATSAPP_DISPLAY} or email {SUPPORT_EMAIL}. We typically reply within a few hours.</p>
-      </section>
-      <div className="sec-inner" style={{ maxWidth: 640, paddingBottom: 80 }}>
-        {status === 'done' ? (
-          <div className="form-card">
-            <h3>Message received</h3>
-            <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 8 }}>We&apos;ll get back to you shortly.</p>
-          </div>
-        ) : (
-          <form className="form-card" onSubmit={submit}>
-            <h3>Send a message</h3>
-            <div className="field-row">
-              <div className="field"><label>Name</label><input name="name" required /></div>
-              <div className="field"><label>Email</label><input name="email" type="email" required /></div>
+      <article className="contact-page">
+        <header className="contact-head">
+          <p className="eyebrow">Hello</p>
+          <h1>Talk to <em>VacayNanny</em></h1>
+          <p>Questions about a booking, a partnership, or the press. We typically reply within a few hours.</p>
+        </header>
+        <div className="contact-grid">
+          {status === 'done' ? (
+            <div className="contact-form contact-done">
+              <h2>Message received</h2>
+              <p>Thanks for writing. We&apos;ll reply to the email you sent.</p>
             </div>
-            <div className="field" style={{ marginBottom: 16 }}>
-              <label>Subject</label>
-              <input name="subject" placeholder="Booking question, partnership, press…" />
+          ) : (
+            <form className="contact-form" onSubmit={submit}>
+              <h2>Send a message</h2>
+              <div className="contact-row">
+                <label>
+                  <span>Name</span>
+                  <input name="name" type="text" required autoComplete="name" />
+                </label>
+                <label>
+                  <span>Email</span>
+                  <input name="email" type="email" required autoComplete="email" />
+                </label>
+              </div>
+              <label>
+                <span>Subject</span>
+                <input name="subject" type="text" placeholder="Booking, partnership, press…" />
+              </label>
+              <label>
+                <span>Message</span>
+                <textarea name="message" required rows={6} />
+              </label>
+              {error && <p className="field-error-msg">{error}</p>}
+              <button className="btn-submit" type="submit" disabled={status === 'loading'}>
+                {status === 'loading' ? 'Sending…' : 'Send message'}
+              </button>
+            </form>
+          )}
+          <aside className="contact-aside">
+            <a className="contact-channel" href={waLink('Hi VacayNanny! I have a question.')} target="_blank" rel="noreferrer">
+              <span>WhatsApp</span>
+              <strong>{WHATSAPP_DISPLAY}</strong>
+              <small>Fastest for booking questions</small>
+            </a>
+            <a className="contact-channel" href={`mailto:${SUPPORT_EMAIL}`}>
+              <span>Email</span>
+              <strong>{SUPPORT_EMAIL}</strong>
+              <small>Partnerships, press, and everything else</small>
+            </a>
+            <div className="contact-note">
+              <h2>We can help with</h2>
+              <ul>
+                <li>Matching a nanny to your trip</li>
+                <li>Resort and property partnerships</li>
+                <li>Press and interviews</li>
+              </ul>
             </div>
-            <div className="field" style={{ marginBottom: 16 }}>
-              <label>Message</label>
-              <textarea name="message" required style={{ minHeight: 140 }} />
-            </div>
-            {error && <p className="field-error-msg">{error}</p>}
-            <button className="btn-submit" disabled={status === 'loading'}>{status === 'loading' ? 'Sending…' : 'Send'}</button>
-          </form>
-        )}
-        <p style={{ marginTop: 20, color: 'rgba(255,255,255,0.45)' }}>
-          Prefer chat? <a href={waLink()} style={{ color: 'var(--coral)' }}>Open WhatsApp</a>
-        </p>
-      </div>
+          </aside>
+        </div>
+      </article>
     </PageShell>
   )
 }
