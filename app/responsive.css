@@ -1,0 +1,49 @@
+/* Shared content boundaries and intrinsic sizing for the platform's workspaces. */
+:where(.sec-inner) {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+}
+.page-inner > .sec-inner {
+  width: calc(100% - 2 * clamp(20px, 5vw, 64px));
+}
+.profile-layout {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, .9fr);
+}
+.profile-layout > *,
+.review-row > *,
+.vetting-docs > *,
+.edit-card,
+.ops-card,
+.ops-panel {
+  min-width: 0;
+}
+.review-key { flex: 0 1 45%; overflow-wrap: anywhere; }
+.review-val { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.page-hero p,
+.account-meta,
+.booking-bubble p,
+.vetting-lightbox p { overflow-wrap: anywhere; }
+.agreement-form input[type=file] { width: 100%; min-width: 0; }
+.ops-filters .ops-search { min-width: 0; }
+.ops-filters > *, .ops-card-head > div { min-width: 0; }
+
+@media (max-width: 900px) {
+  .profile-layout { grid-template-columns: minmax(0, 1fr); }
+  .nav-links.open { max-height: calc(100dvh - 74px); overflow-y: auto; }
+  .nav-burger { width: 44px; height: 44px; }
+  .nav-cta { min-height: 44px; }
+  .booking-actions > :is(button, a),
+  .dash-toolbar > :is(button, a),
+  .ops-card-actions > :is(button, a),
+  .admin-workspace .ops-nav button,
+  .booking-thread-form button,
+  .edit-actions button { min-height: 44px; }
+}
+@media (max-width: 640px) {
+  .review-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .review-val { text-align: left; }
+  .review-key, .review-val { max-width: 100%; }
+  .vetting-docs { grid-template-columns: minmax(0, 1fr); }
+  .ops-filters select { width: 100%; min-width: 0; }
+}

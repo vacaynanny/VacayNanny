@@ -1,0 +1,399 @@
+{
+  "status": "draft",
+  "version": "0.1",
+  "date": "2026-11-18",
+  "pages": [
+    {
+      "title": "Nanny Code of Conduct and Marketplace Participation Agreement",
+      "subtitle": "A shared commitment to thoughtful, responsible care.",
+      "blocks": [
+        {
+          "type": "notice",
+          "text": "DRAFT FOR BUSINESS AND KENYAN LEGAL REVIEW • 18 November 2026. Complete the marked commercial terms and obtain legal review before issuing for signature. This draft is not the approved onboarding attachment."
+        },
+        {
+          "type": "heading",
+          "text": "The parties"
+        },
+        {
+          "type": "fields",
+          "rows": [
+            [
+              "Platform operator’s legal name",
+              "[TO BE CONFIRMED] trading as VacayNanny"
+            ],
+            [
+              "Registration number / address",
+              "[TO BE CONFIRMED]"
+            ],
+            [
+              "Platform contact",
+              "hello@vacaynanny.net • +254 796 930 612"
+            ],
+            [
+              "Nanny’s full legal name",
+              "________________________________________"
+            ],
+            [
+              "Nanny’s ID / passport number",
+              "________________________________________"
+            ],
+            [
+              "Email / phone / address",
+              "________________________________________"
+            ],
+            [
+              "Agreement date / approved tier",
+              "________________________________________"
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Purpose and participation"
+        },
+        {
+          "type": "paragraph",
+          "text": "This agreement sets the standards for participation in the VacayNanny marketplace. “Platform” means the operator identified above; “nanny” means the individual signing this agreement; and “family” means the parent or authorised guardian arranging a booking."
+        },
+        {
+          "type": "paragraph",
+          "text": "Participation is personal to the verified nanny. Application approval is followed by return of the signed agreement, review by VacayNanny and written notification of profile activation. Approval alone does not permit accepting platform bookings. The nanny must provide accurate qualifications, experience, references and eligibility information, and promptly disclose material changes."
+        },
+        {
+          "type": "heading",
+          "text": "Scope of care"
+        },
+        {
+          "type": "paragraph",
+          "text": "Each booking must state the children, location, dates, actual shift times, duties, authorised adults and agreed fees. The nanny may accept only work within their verified training and experience. Additional duties, extra children or changes of location require agreement before the change begins."
+        },
+        {
+          "type": "paragraph",
+          "text": "This agreement covers standard childcare participation. Specialist childcare, adult or elderly care and professional nursing require a separate scope, appropriate qualifications and any applicable professional authorisation. A nanny tier does not by itself authorise clinical services."
+        }
+      ]
+    },
+    {
+      "title": "Care, safety and professional boundaries",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "The child’s welfare comes first. Care must respect the child’s dignity, abilities, culture and individual needs. The nanny must raise concerns when an instruction could put a child at risk."
+        },
+        {
+          "type": "bullets",
+          "items": [
+            "Use calm, age-appropriate guidance. Physical punishment, threats, humiliation, discrimination, exploitation, sexual conduct and grooming are prohibited.",
+            "Maintain appropriate supervision and confirm who is responsible at every handover. Never leave children alone or transfer care to an unapproved person. Release a child only to an authorised adult after identity is confirmed.",
+            "Use only agreed activities and locations. Water activities, transport, excursions and overnight arrangements require clear parental authorisation, appropriate competence and suitable supervision. Decline an unsafe activity.",
+            "Follow the agreed allergy, food, routine and emergency information. Provide first aid only within current training. Medication requires clear written parental instructions and must be within the nanny’s competence and any applicable professional requirements. Do not diagnose, prescribe or undertake clinical procedures without the required authorisation.",
+            "In an emergency, seek appropriate emergency assistance immediately, then notify the parent or guardian and VacayNanny as soon as practicable. Urgent action must not wait for a message reply. Make a factual incident record and cooperate with lawful safeguarding or emergency procedures.",
+            "Report suspected abuse, neglect, injury, a missing child, unsafe conditions or inappropriate adult conduct promptly through the designated safeguarding contact and the relevant authorities where required. Do not conceal incidents or promise secrecy about a child’s safety.",
+            "Attend fit for duty. Alcohol, illicit drugs, impairment, smoking or vaping around children, and leaving children to attend personal business are prohibited during care.",
+            "Use phones only for necessary care, approved updates or emergencies while responsible for children. Do not introduce visitors, solicit loans, accept inappropriate gifts or use the family relationship for personal advantage."
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Respectful working conditions"
+        },
+        {
+          "type": "paragraph",
+          "text": "Families and platform representatives must also treat the nanny respectfully. The nanny may decline work outside the agreed scope or raise harassment, discrimination, unreasonable hours or unsafe conditions without being asked to waive legal rights. Any interruption of care must prioritise a safe handover; a child must never be abandoned."
+        }
+      ]
+    },
+    {
+      "title": "Professional standards and tier eligibility",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Presentation and readiness"
+        },
+        {
+          "type": "paragraph",
+          "text": "Arrive at the confirmed time, with a charged phone and any agreed identification or care materials. Wear clean, practical clothing and footwear suited to childcare and the setting. Clothing and accessories must not create avoidable safety risks. Any uniform requirement must be communicated in advance and applied fairly."
+        },
+        {
+          "type": "paragraph",
+          "text": "Before the shift, review the care plan, emergency contacts, allergies, authorised collection arrangements, activity permissions and handover information. Agree rest and meal breaks with safe cover. Confirm suitable sleeping arrangements and rest periods for overnight or travel work; “overnight availability” does not mean continuous work without rest."
+        },
+        {
+          "type": "heading",
+          "text": "Tier eligibility"
+        },
+        {
+          "type": "paragraph",
+          "text": "The approved tier is recorded by VacayNanny after verification. Child numbers are maximum package references, not a promise that every combination of ages and needs is safe for one caregiver. The booking assessment may require fewer children, additional support or a specialist provider."
+        },
+        {
+          "type": "fields",
+          "rows": [
+            [
+              "Bronze",
+              "Standard eight-hour shift for 1–2 children aged 3–14. Verified background checks, basic first aid, single-property care and approved parent updates."
+            ],
+            [
+              "Silver",
+              "Standard eight-hour shift for up to 3 children. Bronze standards plus verified paediatric first aid, infant/toddler experience, basic tutoring and appropriately supervised swimming activities; English and Swahili."
+            ],
+            [
+              "Gold",
+              "Standard eight-hour shift for up to 4 children. Silver standards plus verified newborn experience, travel eligibility, early-education capability, three or more languages and overnight availability where agreed."
+            ]
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Tier eligibility depends on verified skills and current documents; it does not authorise tasks outside the nanny’s competence. No tier provides unlimited hours or continuous care without agreed rest and handover cover."
+        },
+        {
+          "type": "heading",
+          "text": "Platform participation benefits"
+        },
+        {
+          "type": "paragraph",
+          "text": "An activated profile may be visible to families and receive suitable booking requests, with coordination and support through the platform’s confirmed contact arrangements. Tier eligibility does not guarantee bookings, a minimum income or a particular volume of work. Specific support hours and replacement commitments must match the booking terms and confirmed operational capacity."
+        }
+      ]
+    },
+    {
+      "title": "Bookings, fees and payment arrangements",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Accepting a booking"
+        },
+        {
+          "type": "paragraph",
+          "text": "The nanny must review the proposed booking and accept only if available and suitably qualified. Families accept the nanny match before payment is requested. Care begins only when VacayNanny confirms that all required booking and payment conditions have been met. The parties must record actual start and finish times and promptly report changes, lateness or non-attendance."
+        },
+        {
+          "type": "heading",
+          "text": "Family collection and nanny settlement"
+        },
+        {
+          "type": "paragraph",
+          "text": "Family payments must use the payment route authorised in the booking confirmation. Once Paystack checkout is enabled, the intended family payment options are M-Pesa and enabled debit/credit cards, after match acceptance and before care starts. This draft does not represent that Paystack is already operational."
+        },
+        {
+          "type": "paragraph",
+          "text": "The proposed model allocates 80% of the agreed care-service charge to nanny compensation and 20% to the platform’s service fee, included within the family’s published care charge. Approved expense reimbursements, taxes and pass-through third-party costs are excluded from that percentage calculation. This is a proposed commercial allocation, not an additional family surcharge or a deduction from a separately agreed wage."
+        },
+        {
+          "type": "paragraph",
+          "text": "Proposed payout is within two Kenyan business days after the booked care ends and completed hours are recorded. For bookings longer than seven days, completed care is settled weekly on Friday, with the final balance within two business days of the booking ending. An undisputed earned amount must not wait solely for a family review or an unrelated dispute. Manual M-Pesa or bank transfer is used initially; payout details must be verified and an itemised statement provided. Platform collection and payout charges are absorbed within the platform allocation. Any statutory deduction must be lawful and explained. A Kenyan business day means Monday to Friday, excluding public holidays observed in Kenya."
+        },
+        {
+          "type": "heading",
+          "text": "Changes, cancellations and expenses"
+        },
+        {
+          "type": "paragraph",
+          "text": "Extensions, overtime, extra children, travel, overnight care and extra duties require written agreement on the revised care plan and compensation before they are undertaken, except immediate action necessary to protect a child. Approved transport, meals, accommodation and other expenses must be recorded with reimbursement terms."
+        },
+        {
+          "type": "paragraph",
+          "text": "Under the proposed cancellation model, the nanny receives the agreed fee for completed care and the nanny’s 80% allocation of care charges lawfully retained for cancelled, unworked care under the family terms accepted at booking. The same care charge must not be counted twice. Approved non-refundable expenses are handled as agreed. No automatic fine or forfeiture of earned pay is imposed on the nanny. Complaints and disputed amounts require a fair review, without delaying undisputed sums lawfully due."
+        },
+        {
+          "type": "heading",
+          "text": "Travel and overnight assignments"
+        },
+        {
+          "type": "paragraph",
+          "text": "Confirm the itinerary, working hours, rest, accommodation, transport, emergency arrangements, expenses and insurance before acceptance. Cross-border work requires the appropriate travel documents, entry/work permissions and child-travel authorisations. A Gold tier or possession of a passport does not replace these checks."
+        }
+      ]
+    },
+    {
+      "title": "Privacy, concerns and ending participation",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Confidentiality and children’s information"
+        },
+        {
+          "type": "paragraph",
+          "text": "Use family and child information only for authorised care, required records and lawful safeguarding purposes. Collect only what is needed, keep it secure and share it only with authorised people. Confirm the appropriate parent or guardian authorisation for routine child information and follow the platform’s privacy instructions."
+        },
+        {
+          "type": "paragraph",
+          "text": "Do not post or share a child’s image, name, location, routine or family details on personal social media, marketing pages or unrelated groups. Any permitted photo or care update must use an approved channel and the specific agreed permission; permission for a care update is not permission for advertising."
+        },
+        {
+          "type": "paragraph",
+          "text": "Protect devices and account credentials. Report a lost device, mistaken disclosure or suspected data breach promptly to VacayNanny. Return or securely delete information when no longer authorised, subject to lawful retention and incident-preservation requirements. Confidentiality does not prevent lawful reporting to authorities."
+        },
+        {
+          "type": "heading",
+          "text": "Concerns, suspension and withdrawal"
+        },
+        {
+          "type": "paragraph",
+          "text": "Raise booking, payment or conduct concerns through hello@vacaynanny.net or the published platform contact. VacayNanny may temporarily restrict a profile or bookings while a safeguarding, identity or serious conduct concern is assessed. Where appropriate, the nanny should receive the concern and an opportunity to respond, without compromising child safety or a lawful investigation."
+        },
+        {
+          "type": "paragraph",
+          "text": "Either party may request that participation end. Outstanding bookings require a safe handover and agreed replacement or cancellation arrangements. Outstanding payments and lawful data-handling duties must be resolved. No automatic forfeiture, financial penalty or fixed notice period is created by this draft; any proposed term needs business and legal confirmation."
+        },
+        {
+          "type": "heading",
+          "text": "Law and mandatory rights"
+        },
+        {
+          "type": "paragraph",
+          "text": "Kenyan law applies, subject to mandatory laws applicable to a particular engagement or travel destination. The parties should first seek a fair resolution through the platform, without restricting access to competent authorities or courts."
+        },
+        {
+          "type": "paragraph",
+          "text": "This marketplace agreement does not determine employment status simply by its title. The actual working arrangements and applicable law govern classification, statutory pay, leave, work/rest obligations, tax, social contributions and insurance responsibilities. Nothing in this document waives mandatory rights or excludes liability that cannot lawfully be excluded."
+        }
+      ]
+    },
+    {
+      "title": "Proposed Commercial Schedule",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "These are proposed starting terms for business and Kenyan legal review. They do not change application billing or create an approved fee policy until the operator adopts the final version. Each booking must specify the actual care, agreed compensation and relevant expenses."
+        },
+        {
+          "type": "fields",
+          "rows": [
+            [
+              "Approved tier / effective date",
+              "[TO BE CONFIRMED]"
+            ],
+            [
+              "Nanny fee / basis / currency",
+              "PROPOSED: 80% of agreed care-service charges; KES; hours and duties confirmed per booking."
+            ],
+            [
+              "Platform fee or commission",
+              "PROPOSED: 20% within the family’s care charge; excludes expenses, taxes and pass-through third-party costs."
+            ],
+            [
+              "Payout trigger and deadline",
+              "PROPOSED: within 2 Kenyan business days of care ending; weekly Friday settlement for bookings over 7 days."
+            ],
+            [
+              "Payment method / charges",
+              "PROPOSED: verified M-Pesa or bank transfer; platform collection/payout charges borne by platform."
+            ],
+            [
+              "Overtime / overnight / travel",
+              "Agreed before the change. Proposed 80/20 allocation applies to care-service charges; safe work/rest cover required."
+            ],
+            [
+              "Cancellation / disputed payments",
+              "Completed care paid at agreed fee; 80% of lawfully retained cancelled-care charges allocated to nanny; no double counting."
+            ],
+            [
+              "Expenses / reimbursement date",
+              "PROPOSED: 100% of approved expenses, with records; reimbursed with the next scheduled payout."
+            ],
+            [
+              "Applicable tax / contributions",
+              "Legal classification and statutory duties must be confirmed; no unauthorised or unexplained deductions."
+            ],
+            [
+              "Insurance / limits / exclusions",
+              "Insert verified insurer, policy and cover where applicable. No coverage is represented by this draft."
+            ],
+            [
+              "Safeguarding / out-of-hours contact",
+              "hello@vacaynanny.net / +254 796 930 612; an on-call contact must be confirmed for each booking."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Acknowledgement and signatures",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Acknowledgement"
+        },
+        {
+          "type": "paragraph",
+          "text": "By signing the completed, approved version, the nanny and authorised platform representative confirm that they have read and understood this agreement and the completed Commercial Schedule, had an opportunity to ask questions and seek advice, and agree to the applicable responsibilities. The nanny’s profile becomes active only after the signed agreement is received, reviewed and activation is confirmed."
+        },
+        {
+          "type": "fields",
+          "rows": [
+            [
+              "Nanny name / signature / date",
+              "________________________________________\n________________________________________"
+            ],
+            [
+              "Platform representative / capacity",
+              "________________________________________"
+            ],
+            [
+              "Platform signature / date",
+              "________________________________________"
+            ],
+            [
+              "Approved document version",
+              "________________________________________"
+            ]
+          ]
+        },
+        {
+          "type": "notice",
+          "text": "DRAFT — DO NOT SIGN OR ISSUE UNTIL THE OPEN FIELDS AND LEGAL REVIEW ARE COMPLETE."
+        }
+      ]
+    }
+  ],
+  "review": {
+    "title": "Agreement review notes",
+    "date": "18 November 2026",
+    "open_decisions": [
+      "Confirm the operator’s registered legal name, registration number, address and authority to contract under the VacayNanny brand.",
+      "Obtain Kenyan legal review of the actual service relationship, any employment-agency registration or fee rules, labour rights, statutory contributions, insurance and termination terms. The draft does not assume contractor status.",
+      "Review the proposed 20% platform allocation / 80% nanny compensation, two-business-day payout, weekly settlement for long bookings and full approved-expense reimbursement. Validate the economics and legal treatment before adopting them. These proposed terms have not been added to the payment code.",
+      "Confirm work/rest arrangements, overnight and travel responsibilities, expense reimbursement and insurance cover. Do not invent a cover policy or assume that client package prices equal nanny earnings.",
+      "Confirm safeguarding escalation ownership, monitored contact details, actual out-of-hours coverage, complaint handling and any replacement promises.",
+      "Reconcile Bronze ages 3–14 with the existing FAQ’s broader infant-care claim. The draft follows the supplied tier reference and requires verified infant experience for Silver/Gold.",
+      "Create separate scopes and qualification checks for specialist childcare, adult/elderly care and nursing. This childcare marketplace draft does not authorise regulated clinical practice.",
+      "Review the privacy notice, parent/guardian authorisation flow, retention schedule and reporting process. Record consent for care updates separately from any marketing use.",
+      "After business and legal approval, complete the open fields, remove the draft notices, issue an approved version, upload that PDF to private storage and configure its path. Keep approval-email delivery disabled until then."
+    ],
+    "sources": [
+      {
+        "title": "Children Act 2022 — Judiciary publication",
+        "url": "https://judiciary.go.ke/download/the-children-act-2022/",
+        "note": "Reference for child safeguarding; confirm the current consolidated law and reporting obligations during legal review."
+      },
+      {
+        "title": "ODPC — Guidance Notes for Processing Children’s Data (2025)",
+        "url": "https://www.odpc.go.ke/wp-content/uploads/2025/11/ODPC-%E2%80%93-Guidance-Note-for-Processing-Childrens-Data.pdf",
+        "note": "Reference for purpose, consent, privacy and limited use of child information."
+      },
+      {
+        "title": "State Department for Labour — Laws and Regulations",
+        "url": "https://www.labour.go.ke/laws-regulations",
+        "note": "Employment and related rules require review against actual working arrangements and current amendments. No independent-contractor classification is assumed."
+      },
+      {
+        "title": "ODPC — Data protection legal framework",
+        "url": "https://www.odpc.go.ke/data-protection-laws-kenya/",
+        "note": "Reference for the Data Protection Act and related regulations."
+      },
+      {
+        "title": "NEAIMS — agency registration procedures and FAQs",
+        "url": "https://www.neaims.go.ke/Downloads/NEAIMSProcedures.pdf",
+        "note": "Review which registration and fee requirements apply to the actual operating model; this document does not establish an exemption."
+      },
+      {
+        "title": "Paystack Kenya — merchant terms",
+        "url": "https://paystack.com/ke/terms",
+        "note": "Collection and transfer costs must be checked against the approved merchant account when validating the proposed platform allocation."
+      }
+    ]
+  }
+}

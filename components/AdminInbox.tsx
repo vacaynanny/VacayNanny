@@ -1,5 +1,8 @@
 'use client'
 
+import SpecialistEnquiryCard from './SpecialistEnquiryCard'
+import type { CareEnquiry } from '@/lib/care-enquiries'
+
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ContactMessage, WaitlistEntry } from '@/lib/types'
@@ -18,7 +21,11 @@ function mailto(email: string, subject?: string | null) {
 export default function AdminInbox({
   contactMessages,
   waitlist,
+  adminId,
+  operators = [],
 }: {
+  operators?: Array<{ id: string; fullName: string; email: string | null }>
+  adminId: string
   contactMessages: ContactMessage[]
   waitlist: WaitlistEntry[]
 }) {
@@ -55,52 +62,88 @@ export default function AdminInbox({
   return (
     <div>
       <div className="dash-tabs" style={{ marginBottom: 16 }}>
-        <button className={pane === 'contact' ? 'active' : ''} onClick={() => setPane('contact')}>
+        <button
+          className={pane === 'contact' ? 'active' : ''}
+          onClick={() => setPane('contact')}
+        >
           Contact ({contactMessages.length})
         </button>
-        <button className={pane === 'waitlist' ? 'active' : ''} onClick={() => setPane('waitlist')}>
+        <button
+          className={pane === 'waitlist' ? 'active' : ''}
+          onClick={() => setPane('waitlist')}
+        >
           Waitlist ({waitlist.length})
         </button>
       </div>
-      {error && <p className="field-error-msg" style={{ marginBottom: 16 }}>{error}</p>}
+      {error && (
+        <p className="field-error-msg" style={{ marginBottom: 16 }}>
+          {error}
+        </p>
+      )}
 
       {pane === 'contact' && (
         <div>
           {contactMessages.length === 0 && (
             <div className="ops-empty">
               <h3>No contact messages</h3>
-              <p>Messages from the contact form land here. Reply by email, then remove the ones you have handled.</p>
+              <p>
+                Messages from the contact form land here. Reply by email, then remove the
+                ones you have handled.
+              </p>
             </div>
           )}
-          {contactMessages.map(m => (
-            <div className="form-card" key={m.id}>
-              <div className="review-row">
-                <span className="review-key">
-                  <strong>{m.name}</strong>
-                  <br />
-                  <small>{m.email} · {when(m.created_at)}</small>
-                </span>
-                <span className="review-val">{m.subject || 'No subject'}</span>
-              </div>
-              <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, fontSize: '0.9rem', margin: '10px 0 12px', whiteSpace: 'pre-wrap' }}>
-                {m.message}
-              </p>
-              <div className="booking-actions" style={{ marginTop: 0 }}>
-                <a className="btn-coral" href={mailto(m.email, m.subject ? `Re: ${m.subject}` : 'VacayNanny')}>
-                  Reply by email
-                </a>
-                <button
-                  className="btn-ghost"
-                  disabled={busy === m.id}
-                  onClick={() => {
-                    if (confirm('Remove this message from the inbox?')) remove('contact', m.id)
+          {contactMessages.map((m) =>
+            (m as CareEnquiry).care_service ? (
+              <SpecialistEnquiryCard
+                key={m.id}
+                enquiry={m as CareEnquiry}
+                adminId={adminId}
+                operators={operators}
+              />
+            ) : (
+              <div className="form-card" key={m.id}>
+                <div className="review-row">
+                  <span className="review-key">
+                    <strong>{m.name}</strong>
+                    <br />
+                    <small>
+                      {m.email} · {when(m.created_at)}
+                    </small>
+                  </span>
+                  <span className="review-val">{m.subject || 'No subject'}</span>
+                </div>
+                <p
+                  style={{
+                    color: 'rgba(23,50,77,0.7)',
+                    lineHeight: 1.6,
+                    fontSize: '0.9rem',
+                    margin: '10px 0 12px',
+                    whiteSpace: 'pre-wrap',
                   }}
                 >
-                  Remove
-                </button>
+                  {m.message}
+                </p>
+                <div className="booking-actions" style={{ marginTop: 0 }}>
+                  <a
+                    className="btn-coral"
+                    href={mailto(m.email, m.subject ? `Re: ${m.subject}` : 'VacayNanny')}
+                  >
+                    Reply by email
+                  </a>
+                  <button
+                    className="btn-ghost"
+                    disabled={busy === m.id}
+                    onClick={() => {
+                      if (confirm('Remove this message from the inbox?'))
+                        remove('contact', m.id)
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ),
+          )}
         </div>
       )}
 
@@ -109,15 +152,23 @@ export default function AdminInbox({
           {waitlist.length === 0 && (
             <div className="ops-empty">
               <h3>No waitlist signups</h3>
-              <p>Families who want coverage outside the current destinations show up here.</p>
+              <p>
+                Families who want coverage outside the current destinations show up here.
+              </p>
             </div>
           )}
           {byRegion.length > 0 && (
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: 16 }}>
+            <p
+              style={{
+                color: 'rgba(23,50,77,0.5)',
+                fontSize: '0.85rem',
+                marginBottom: 16,
+              }}
+            >
               {byRegion.map(([region, count]) => `${region} ${count}`).join(' · ')}
             </p>
           )}
-          {waitlist.map(row => (
+          {waitlist.map((row) => (
             <div className="form-card" key={row.id}>
               <div className="review-row">
                 <span className="review-key">
@@ -128,14 +179,21 @@ export default function AdminInbox({
                 <span className="review-val">{row.region || 'Unspecified'}</span>
               </div>
               <div className="booking-actions">
-                <a className="btn-coral" href={mailto(row.email, `VacayNanny — ${row.region || 'expansion'} waitlist`)}>
+                <a
+                  className="btn-coral"
+                  href={mailto(
+                    row.email,
+                    `VacayNanny — ${row.region || 'expansion'} waitlist`,
+                  )}
+                >
                   Email
                 </a>
                 <button
                   className="btn-ghost"
                   disabled={busy === row.id}
                   onClick={() => {
-                    if (confirm('Remove this waitlist signup?')) remove('waitlist', row.id)
+                    if (confirm('Remove this waitlist signup?'))
+                      remove('waitlist', row.id)
                   }}
                 >
                   Remove

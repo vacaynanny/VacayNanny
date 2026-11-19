@@ -1,0 +1,4 @@
+.placeholder { height: 100%; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; background: radial-gradient(ellipse at 15% 10%,#e2e9d8 0%,transparent 60%),#f2ede1; color: #4b6d52; }
+.placeholder > span { display: flex; align-items: center; justify-content: center; width: 110px; height: 110px; border: 1px solid #a7b79b; border-radius: 50%; font-family: var(--font-playfair),Georgia,serif; font-size: 2.4rem; font-weight: 400; }
+.placeholder p { font-size: .68rem; letter-spacing: .05em; color: #586c55; }
+.bio { font-size: .8rem; color: var(--text-muted); line-height: 1.75; margin-top: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

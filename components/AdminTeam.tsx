@@ -156,7 +156,7 @@ export default function AdminTeam({
           {account.role === 'nanny' && !publishedUserIds.includes(account.id) && (
             <div className="ops-card-actions">
               <button className="btn-coral" disabled={busy === account.id} onClick={() => approve(account.id)}>
-                {busy === account.id ? 'Approving…' : 'Approve and publish'}
+                {busy === account.id ? 'Approving…' : 'Activate profile'}
               </button>
             </div>
           )}

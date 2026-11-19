@@ -1,63 +1,113 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, hasSupabaseConfig } from '@/lib/supabase'
-import { notifyBookingEvent, sendBookingEmails } from '@/lib/email'
+import { randomUUID } from 'node:crypto'
+import { validateCareDates } from '@/lib/booking-validation'
+import { sealWorkflow } from '@/lib/workflow-secrets'
 import { createSupabaseServer } from '@/lib/supabase/server'
-import { careTypeLabel, parseCareType, quoteBooking } from '@/lib/booking'
-import { findNannyClashes, jsonFromBookingError, nannyContact, suggestMatch } from '@/lib/booking-ops'
+import { parseCareType, quoteBooking } from '@/lib/booking'
+import {
+  assertEligibleNanny,
+  findNannyClashes,
+  jsonFromBookingError,
+  suggestMatch,
+} from '@/lib/booking-ops'
 import { parseAddonCodes, quoteRatesFromCatalog } from '@/lib/catalog'
 import { loadQuoteCatalog } from '@/lib/catalog-data'
 import { limitRoute } from '@/lib/rate-limit'
-import { publicDailyRate } from '@/lib/safeguarding'
+import { publicDailyRate, publicTier } from '@/lib/safeguarding'
+import { createGuestAccess } from '@/lib/guest-access'
+import { siteUrl, normalizeTier } from '@/lib/constants'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const parentName = String(body.parentName || body.name || '').trim()
-    const email = String(body.email || '').trim()
+    const email = String(body.email || '')
+      .trim()
+      .toLowerCase()
     const destination = String(body.destination || '').trim()
     const checkIn = String(body.checkIn || '')
     const checkOut = String(body.checkOut || '')
     const phone = String(body.phone || '').trim()
     const childrenCount = String(body.childrenCount || body.children || '')
-    const infantCare = body.infantCare === true || body.infantCare === 'true' || body.infantCare === '1'
-    const youngestAge = String(body.youngestAge || body.childrenAges || '') || (infantCare ? 'Under 1 year' : '')
+    const infantCare =
+      body.infantCare === true || body.infantCare === 'true' || body.infantCare === '1'
+    const youngestAge = infantCare
+      ? 'Under 1 year'
+      : String(body.youngestAge || body.childrenAges || '')
     const nanniesNeeded = String(body.nanniesNeeded || '1')
     const tier = String(body.tier || '')
     const notes = String(body.notes || body.message || '')
     const careType = parseCareType(body.careType)
-    let nannyId = body.nannyId && !String(body.nannyId).startsWith('fallback-')
-      ? String(body.nannyId)
-      : null
+    let nannyId =
+      body.nannyId && !String(body.nannyId).startsWith('fallback-')
+        ? String(body.nannyId)
+        : null
 
     if (!parentName || !email || !destination || !checkIn || !checkOut) {
-      return NextResponse.json({ error: 'Name, email, destination and dates are required.' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Name, email, destination and dates are required.' },
+        { status: 400 },
+      )
     }
-    if (new Date(checkOut) < new Date(checkIn)) {
-      return NextResponse.json({ error: 'Check-out must be on or after check-in.' }, { status: 400 })
-    }
+    const dateError = validateCareDates(checkIn, checkOut)
+    if (dateError) return NextResponse.json({ error: dateError }, { status: 400 })
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+      parentName.length > 120 ||
+      notes.length > 3000 ||
+      !/^[1-3]$/.test(nanniesNeeded) ||
+      !/^(?:[1-9]|1[0-2])$/.test(childrenCount)
+    )
+      return NextResponse.json(
+        { error: 'Provide a valid email, 1–12 children and 1–3 nannies.' },
+        { status: 400 },
+      )
 
+    if (/special[ -]?needs|autism|\badhd\b|nursing|dementia|post[ -]?surg/i.test(notes))
+      return NextResponse.json(
+        {
+          error:
+            'Please request a specialist care quote so our team can assess the support and provider qualifications before matching.',
+        },
+        { status: 400 },
+      )
     let parentId: string | null = null
     try {
       const authClient = await createSupabaseServer()
-      const { data: { user } } = await authClient.auth.getUser()
-      parentId = user?.id ?? null
+      const {
+        data: { user },
+      } = await authClient.auth.getUser()
+      parentId = user?.email?.toLowerCase() === email ? user.id : null
     } catch {}
 
     if (!hasSupabaseConfig() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: 'Booking storage is not configured yet.' }, { status: 503 })
+      return NextResponse.json(
+        { error: 'Booking storage is not configured yet.' },
+        { status: 503 },
+      )
     }
 
     const supabase = createServerClient()
     const blocked = await limitRoute(request, supabase, 'booking', { email })
     if (blocked) return blocked
 
+    const normalizedTier = normalizeTier(tier)
+    const capacity = normalizedTier === 'bronze' ? 2 : normalizedTier === 'silver' ? 3 : 4
+    if (Number(childrenCount) > capacity * Number(nanniesNeeded))
+      return NextResponse.json(
+        {
+          error: 'Choose a higher care tier or more nannies for the number of children.',
+        },
+        { status: 400 },
+      )
+    let assignedTier: string | null = null
     let dailyRateKes: number | null = null
-    let nannyName: string | null = null
-    let nannyEmail: string | null = null
-    let nannyPhone: string | null = null
     if (!nannyId) {
       const suggested = await suggestMatch(supabase, {
         destination,
+        childrenCount,
+        nanniesNeeded,
         checkIn,
         checkOut,
         tier,
@@ -72,36 +122,56 @@ export async function POST(request: NextRequest) {
     const quoteCatalog = await loadQuoteCatalog(supabase)
     const rates = quoteRatesFromCatalog(quoteCatalog)
     if (nannyId) {
+      await assertEligibleNanny(supabase, nannyId, {
+        id: '',
+        destination,
+        check_in: checkIn,
+        check_out: checkOut,
+        tier,
+        youngest_age: youngestAge,
+        notes,
+        care_type: careType,
+        children_count: childrenCount,
+        nannies_needed: nanniesNeeded,
+      })
       const { data } = await supabase
         .from('nannies')
         .select('tier, daily_rate_kes, safeguarding_completed_at')
         .eq('id', nannyId)
         .maybeSingle()
       if (data?.tier) {
-        dailyRateKes = publicDailyRate({
-          tier: data.tier,
-          daily_rate_kes: data.daily_rate_kes,
-          safeguarding_completed_at: data.safeguarding_completed_at,
-        }, rates.tierRates)
+        assignedTier = publicTier(data)
+        dailyRateKes = publicDailyRate(
+          {
+            tier: data.tier,
+            daily_rate_kes: data.daily_rate_kes,
+            safeguarding_completed_at: data.safeguarding_completed_at,
+          },
+          rates.tierRates,
+        )
       }
-      const contact = await nannyContact(supabase, nannyId)
-      nannyName = contact.name
-      nannyEmail = contact.email
-      nannyPhone = contact.phone
       const clashes = await findNannyClashes(supabase, nannyId, checkIn, checkOut)
       if (clashes.length) {
-        return NextResponse.json({
-          error: 'That nanny is already booked for overlapping dates. Pick different dates or another nanny.',
-          clashes,
-        }, { status: 409 })
+        return NextResponse.json(
+          {
+            error:
+              'That nanny is already booked for overlapping dates. Pick different dates or another nanny.',
+          },
+          { status: 409 },
+        )
       }
     }
 
-    const knownCare = quoteCatalog.care.some(care => care.code === careType)
+    const knownCare = quoteCatalog.care.some((care) => care.code === careType)
     if (quoteCatalog.persisted && quoteCatalog.care.length > 0 && !knownCare) {
-      return NextResponse.json({ error: 'That care package is not available.' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'That care package is not available.' },
+        { status: 400 },
+      )
     }
-    const addonCodes = parseAddonCodes(body.addonCodes).filter(code => rates.addons.some(addon => addon.code === code))
+    const addonCodes = parseAddonCodes(body.addonCodes).filter((code) =>
+      rates.addons.some((addon) => addon.code === code),
+    )
     const quote = quoteBooking({
       checkIn,
       checkOut,
@@ -115,13 +185,21 @@ export async function POST(request: NextRequest) {
       strictRates: quoteCatalog.persisted,
     })
     if (quote.dailyRate <= 0 || quote.multiplier <= 0) {
-      return NextResponse.json({ error: 'Pricing is not published for this booking yet.' }, { status: 503 })
+      return NextResponse.json(
+        { error: 'Pricing is not published for this booking yet.' },
+        { status: 503 },
+      )
     }
     const total = quote.total
-    const careLabel = quoteCatalog.care.find(care => care.code === careType)?.label
 
     const assigned = Boolean(nannyId)
+    const guestAccess = createGuestAccess()
+    const id = randomUUID()
+    const trackingPath = `/booking/${id}?token=${guestAccess.token}`
     const row = {
+      id,
+      guest_access_token_hash: guestAccess.hash,
+      payment_status: 'unpaid',
       parent_id: parentId,
       nanny_id: nannyId,
       parent_name: parentName,
@@ -133,57 +211,35 @@ export async function POST(request: NextRequest) {
       children_count: childrenCount || null,
       youngest_age: youngestAge || null,
       nannies_needed: nanniesNeeded,
-      tier: tier || null,
+      tier: assignedTier || normalizedTier || null,
       notes: notes || null,
-      status: assigned ? 'matched' as const : 'pending' as const,
-      nanny_response: assigned ? 'pending' as const : null,
+      status: assigned ? ('matched' as const) : ('pending' as const),
+      nanny_response: assigned ? ('pending' as const) : null,
       care_type: careType,
       total_amount_kes: total,
       addon_codes: addonCodes,
     }
-    let { error } = await supabase.from('bookings').insert([row]).select('id').maybeSingle()
-    if (error && /addon_codes/.test(error.message)) {
-      const withoutAddons = { ...row }
-      Reflect.deleteProperty(withoutAddons, 'addon_codes')
-      const retry = await supabase.from('bookings').insert([withoutAddons]).select('id').maybeSingle()
-      error = retry.error
-    }
-
+    const { error } = await supabase.rpc('save_booking_request', {
+      p_row: row,
+      p_notification: sealWorkflow({ trackingUrl: siteUrl(trackingPath) }),
+    })
     if (error) {
-      console.error('Supabase booking error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error.code === '23P01')
+        return NextResponse.json(
+          { error: 'That nanny is no longer available. Please choose another match.' },
+          { status: 409 },
+        )
+      console.error('Could not save booking request:', error.code)
+      return NextResponse.json(
+        { error: 'Could not save your request. Please retry.' },
+        { status: 503 },
+      )
     }
 
-    if (assigned) {
-      notifyBookingEvent('matched', {
-        parentName,
-        parentEmail: email,
-        nannyName,
-        nannyEmail,
-        nannyPhone,
-        destination,
-        checkIn,
-        checkOut,
-        careType: careTypeLabel(careType, careLabel),
-        status: 'matched',
-        totalKes: total,
-        note: 'Family requested this nanny',
-      }).catch(err => console.error('notifyBookingEvent matched failed:', err))
-    } else {
-      sendBookingEmails({
-        parentName,
-        email,
-        phone,
-        destination,
-        checkIn,
-        checkOut,
-        childrenAges: [childrenCount, youngestAge].filter(Boolean).join(' · '),
-        tier: tier || 'Any',
-        message: notes,
-      }).catch(err => console.error('sendBookingEmails failed:', err))
-    }
-
-    return NextResponse.json({ success: true, total, careType }, { status: 200 })
+    return NextResponse.json(
+      { success: true, total, careType, trackingPath },
+      { status: 200 },
+    )
   } catch (err) {
     return jsonFromBookingError(err)
   }

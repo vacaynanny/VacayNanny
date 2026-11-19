@@ -1,7 +1,18 @@
 export type UserRole = 'parent' | 'nanny' | 'admin'
 export type NannyTier = 'bronze' | 'silver' | 'gold'
-export type ApplicationStatus = 'pending' | 'reviewing' | 'interview' | 'approved' | 'rejected'
-export type BookingStatus = 'pending' | 'matched' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled'
+export type ApplicationStatus =
+  | 'pending'
+  | 'reviewing'
+  | 'interview'
+  | 'approved'
+  | 'rejected'
+export type BookingStatus =
+  | 'pending'
+  | 'matched'
+  | 'confirmed'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
 export type CareType = 'standard' | 'extended' | 'overnight'
 export type NannyResponse = 'pending' | 'accepted' | 'declined'
 export type DocumentKind =
@@ -66,6 +77,8 @@ export type Nanny = {
   available_days: string[]
   willing_to_travel: string | null
   is_active: boolean
+  is_suspended?: boolean
+  suspension_reason?: string | null
   rating_avg: number
   review_count: number
   safeguarding_completed_at: string | null
@@ -87,6 +100,10 @@ export type Review = {
 }
 
 export type Booking = {
+  version?: number
+  match_expires_at?: string | null
+  booking_assignments?: BookingAssignment[]
+  my_response?: NannyResponse | null
   id: string
   parent_id: string | null
   nanny_id: string | null
@@ -114,13 +131,43 @@ export type Booking = {
   replacement_fulfilled_at: string | null
   replaced_nanny_id: string | null
   addon_codes?: string[]
+  payment_status?: 'unpaid' | 'paid' | 'not_required' | 'refund_pending' | 'refunded'
+  paid_at?: string | null
+  guest_access_token_hash?: string | null
   created_at: string
   updated_at?: string
-  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier' | 'daily_rate_kes' | 'safeguarding_completed_at'> | null
-  review?: Pick<Review, 'id' | 'rating' | 'body' | 'trip_label' | 'is_published' | 'created_at'> | null
+  nannies?: Pick<
+    Nanny,
+    | 'id'
+    | 'display_name'
+    | 'slug'
+    | 'photo_url'
+    | 'tier'
+    | 'daily_rate_kes'
+    | 'safeguarding_completed_at'
+  > | null
+  review?: Pick<
+    Review,
+    'id' | 'rating' | 'body' | 'trip_label' | 'is_published' | 'created_at'
+  > | null
+}
+
+export type BookingAssignment = {
+  slot: number
+  nanny_id: string
+  response: 'pending' | 'accepted'
+  responded_at?: string | null
+  nannies?: Pick<Nanny, 'id' | 'display_name' | 'slug' | 'photo_url' | 'tier'> | null
 }
 
 export type NannyApplication = {
+  vetting_checks?: Record<string, boolean>
+  vetting_reviewed_at?: string | null
+  vetting_reviewed_by?: string | null
+  agreement_signed_path?: string | null
+  agreement_reviewed_at?: string | null
+  agreement_reviewed_by?: string | null
+  approval_email_sent_at?: string | null
   id: string
   user_id: string | null
   full_name: string
@@ -194,6 +241,7 @@ export type WaitlistEntry = {
 }
 
 export type ContactMessage = {
+  care_service?: string | null
   id: string
   name: string
   email: string

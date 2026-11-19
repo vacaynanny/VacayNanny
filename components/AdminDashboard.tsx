@@ -55,7 +55,7 @@ function Donut({ parts }: { parts: Array<{ label: string; value: number; color: 
   return (
     <div className="dash-donut">
       <svg viewBox="0 0 120 120" role="img" aria-label={summary || 'No accounts'}>
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="12" />
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgba(23,50,77,0.08)" strokeWidth="12" />
         {total > 0 && parts.map(part => {
           const length = (part.value / total) * circumference
           const ring = (
@@ -75,8 +75,8 @@ function Donut({ parts }: { parts: Array<{ label: string; value: number; color: 
           cursor += length
           return ring
         })}
-        <text x="60" y="58" textAnchor="middle" fill="#fff" fontSize="22" fontWeight="700">{total}</text>
-        <text x="60" y="74" textAnchor="middle" fill="rgba(255,255,255,0.5)" fontSize="9">accounts</text>
+        <text x="60" y="58" textAnchor="middle" fill="var(--deep)" fontSize="22" fontWeight="700">{total}</text>
+        <text x="60" y="74" textAnchor="middle" fill="var(--text-muted)" fontSize="9">accounts</text>
       </svg>
       <ul className="dash-legend">
         {parts.map(part => (

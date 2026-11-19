@@ -51,13 +51,7 @@ export default function NannyProfile({
         <Link href="/nannies" className="nav-back">← All nannies</Link>
         <div className="nanny-stage">
           <div className="nanny-portrait">
-            <MediaImage
-              src={nanny.photo_url || '/images/top-right.png'}
-              alt={nanny.display_name}
-              fill
-              sizes="(max-width: 860px) 100vw, 420px"
-              style={{ objectFit: 'cover', objectPosition: 'center 18%' }}
-            />
+            {nanny.photo_url ? <MediaImage src={nanny.photo_url} alt={nanny.display_name} fill sizes="(max-width: 860px) 100vw, 420px" style={{objectFit:'cover',objectPosition:'center 18%'}}/> : <span className="nanny-photo-placeholder">{nanny.display_name.split(' ').slice(0,2).map(part=>part[0]).join('')}</span>}
             <span className={`tier-pill ${tierClass(shownTier)}`}>{label}</span>
           </div>
           <div className="nanny-copy">

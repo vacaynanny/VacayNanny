@@ -34,7 +34,7 @@ export default function WaitlistPage() {
       </section>
       <div className="sec-inner" style={{ maxWidth: 520, paddingBottom: 80 }}>
         {status === 'done' ? (
-          <div className="form-card"><h3>You&apos;re on the list</h3><p style={{ color: 'rgba(255,255,255,0.55)', marginTop: 8 }}>We&apos;ll be in touch when coverage opens.</p></div>
+          <div className="form-card"><h3>You&apos;re on the list</h3><p style={{ color: 'rgba(23,50,77,0.55)', marginTop: 8 }}>We&apos;ll be in touch when coverage opens.</p></div>
         ) : (
           <form className="form-card" onSubmit={submit}>
             <div className="field" style={{ marginBottom: 16 }}>

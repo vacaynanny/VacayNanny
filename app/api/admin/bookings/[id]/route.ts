@@ -4,7 +4,14 @@ import { createServerClient } from '@/lib/supabase'
 import { applyBookingMutation, jsonFromBookingError } from '@/lib/booking-ops'
 import type { BookingStatus } from '@/lib/types'
 
-const STATUSES: BookingStatus[] = ['pending', 'matched', 'confirmed', 'in_progress', 'completed', 'cancelled']
+const STATUSES: BookingStatus[] = [
+  'pending',
+  'matched',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'cancelled',
+]
 
 export async function PATCH(
   request: NextRequest,
@@ -19,35 +26,85 @@ export async function PATCH(
     const body = await request.json()
     const supabase = createServerClient()
 
+    const actor = {
+      id: profile.id,
+      verifiedEmail: profile.emailConfirmed ? profile.email : null,
+    }
     const action = String(body.action || '')
     if (action === 'auto_match') {
-      const result = await applyBookingMutation(supabase, id, { action: 'auto_match' })
-      return NextResponse.json({ success: true, booking: result.booking, event: result.event })
+      const result = await applyBookingMutation(
+        supabase,
+        id,
+        { action: 'auto_match' },
+        actor,
+      )
+      return NextResponse.json({
+        success: true,
+        booking: result.booking,
+        event: result.event,
+      })
     }
     if (action === 'replace') {
-      const result = await applyBookingMutation(supabase, id, { action: 'replace', reason: body.reason })
-      return NextResponse.json({ success: true, booking: result.booking, event: result.event })
+      const result = await applyBookingMutation(
+        supabase,
+        id,
+        { action: 'replace', reason: body.reason, slot: Number(body.slot) || 1 },
+        actor,
+      )
+      return NextResponse.json({
+        success: true,
+        booking: result.booking,
+        event: result.event,
+      })
     }
     if (action === 'refund_replacement') {
-      const result = await applyBookingMutation(supabase, id, { action: 'refund_replacement' })
-      return NextResponse.json({ success: true, booking: result.booking, event: result.event })
+      const result = await applyBookingMutation(
+        supabase,
+        id,
+        { action: 'refund_replacement' },
+        actor,
+      )
+      return NextResponse.json({
+        success: true,
+        booking: result.booking,
+        event: result.event,
+      })
     }
     if (action === 'assign' || body.nannyId !== undefined) {
       const nannyId = body.nannyId ? String(body.nannyId) : null
-      const result = await applyBookingMutation(supabase, id, {
-        action: 'assign',
-        nannyId,
-        force: Boolean(body.force),
+      const result = await applyBookingMutation(
+        supabase,
+        id,
+        {
+          action: 'assign',
+          nannyId,
+          force: Boolean(body.force),
+          slot: Number(body.slot) || 1,
+        },
+        actor,
+      )
+      return NextResponse.json({
+        success: true,
+        booking: result.booking,
+        event: result.event,
       })
-      return NextResponse.json({ success: true, booking: result.booking, event: result.event })
     }
     if (action === 'set_status' || body.status) {
       const status = body.status as BookingStatus
       if (!STATUSES.includes(status)) {
         return NextResponse.json({ error: 'Invalid status.' }, { status: 400 })
       }
-      const result = await applyBookingMutation(supabase, id, { action: 'set_status', status })
-      return NextResponse.json({ success: true, booking: result.booking, event: result.event })
+      const result = await applyBookingMutation(
+        supabase,
+        id,
+        { action: 'set_status', status },
+        actor,
+      )
+      return NextResponse.json({
+        success: true,
+        booking: result.booking,
+        event: result.event,
+      })
     }
     return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
   } catch (err) {

@@ -17,7 +17,7 @@ export default function PageShell({
   return (
     <>
       <Nav onBook={() => setModalOpen(true)} />
-      <div className="site-wrap page-inner">
+      <div className="site-wrap page-inner" id="main-content">
         {children}
         <Footer />
       </div>

@@ -84,7 +84,7 @@ export default function AdminCatalog({
     return (
       <div className="form-card">
         <h3>Catalog not in the database yet</h3>
-        <p style={{ color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
+        <p style={{ color: 'rgba(23,50,77,0.7)', marginTop: 8 }}>
           Run supabase/content_catalog.sql in the Supabase SQL editor. Until those tables exist, the public site keeps the built-in demo copy and this screen cannot save changes.
         </p>
       </div>

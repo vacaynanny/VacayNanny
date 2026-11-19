@@ -1,3 +1,5 @@
+import CareEnquiryView from '@/components/CareEnquiryView'
+import { FAMILY_CARE_COLUMNS, type FamilyCareEnquiry } from '@/lib/care-enquiries'
 import { requireProfile } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase'
 import PageShell from '@/components/PageShell'
@@ -12,7 +14,7 @@ import { advanceDueBookings } from '@/lib/booking-ops'
 export const metadata = { title: 'Your bookings — VacayNanny' }
 
 function escapeIlikeExact(value: string) {
-  return value.replace(/[\\%_]/g, char => `\\${char}`)
+  return value.replace(/[\\%_]/g, (char) => `\\${char}`)
 }
 
 const OPEN_STATUSES: BookingStatus[] = ['pending', 'matched', 'confirmed', 'in_progress']
@@ -43,16 +45,22 @@ function tripWhen(booking: Booking) {
 export default async function AccountPage() {
   const profile = await requireProfile(['parent', 'admin', 'nanny'])
   let bookings: Booking[] = []
+  let careEnquiries: FamilyCareEnquiry[] = []
   try {
     const supabase = createServerClient()
     await advanceDueBookings(supabase)
-    const columns = '*, nannies(id, display_name, slug, photo_url, tier, daily_rate_kes)'
+    const columns =
+      '*, nannies!bookings_nanny_id_fkey(id, display_name, slug, photo_url, tier, daily_rate_kes),booking_assignments(slot,nanny_id,response,nannies(id,display_name,slug,photo_url,tier))'
     const queries = [
       supabase.from('bookings').select(columns).eq('parent_id', profile.id),
     ]
     if (profile.emailConfirmed && profile.email) {
       queries.push(
-        supabase.from('bookings').select(columns).ilike('email', escapeIlikeExact(profile.email)),
+        supabase
+          .from('bookings')
+          .select(columns)
+          .ilike('email', escapeIlikeExact(profile.email))
+          .is('parent_id', null),
       )
     }
     const results = await Promise.all(queries)
@@ -60,32 +68,74 @@ export default async function AccountPage() {
     for (const result of results) {
       for (const row of (result.data || []) as Booking[]) merged.set(row.id, row)
     }
-    bookings = [...merged.values()].sort((a, b) => b.created_at.localeCompare(a.created_at))
-    const bookingIds = bookings.map(b => b.id)
+    bookings = [...merged.values()].sort((a, b) =>
+      b.created_at.localeCompare(a.created_at),
+    )
+    const careQueries = [
+      supabase
+        .from('contact_messages')
+        .select<string, FamilyCareEnquiry>(FAMILY_CARE_COLUMNS)
+        .eq('family_id', profile.id)
+        .not('care_service', 'is', null),
+    ]
+    if (profile.emailConfirmed && profile.email)
+      careQueries.push(
+        supabase
+          .from('contact_messages')
+          .select<string, FamilyCareEnquiry>(FAMILY_CARE_COLUMNS)
+          .is('family_id', null)
+          .ilike('email', escapeIlikeExact(profile.email))
+          .not('care_service', 'is', null),
+      )
+    const careRows = await Promise.all(careQueries)
+    careEnquiries = [
+      ...new Map(
+        careRows
+          .flatMap((result) => (result.data || []) as unknown as FamilyCareEnquiry[])
+          .map((row) => [row.id, row]),
+      ).values(),
+    ]
+    const bookingIds = bookings.map((b) => b.id)
     if (bookingIds.length) {
       const { data: reviewRows } = await supabase
         .from('reviews')
         .select('id, booking_id, rating, body, trip_label, is_published, created_at')
         .in('booking_id', bookingIds)
       const byBooking = new Map(
-        ((reviewRows || []) as Pick<Review, 'id' | 'booking_id' | 'rating' | 'body' | 'trip_label' | 'is_published' | 'created_at'>[])
-          .filter(r => r.booking_id)
-          .map(r => [r.booking_id as string, r]),
+        (
+          (reviewRows || []) as Pick<
+            Review,
+            | 'id'
+            | 'booking_id'
+            | 'rating'
+            | 'body'
+            | 'trip_label'
+            | 'is_published'
+            | 'created_at'
+          >[]
+        )
+          .filter((r) => r.booking_id)
+          .map((r) => [r.booking_id as string, r]),
       )
-      bookings = bookings.map(b => ({ ...b, review: byBooking.get(b.id) ?? null }))
+      bookings = bookings.map((b) => ({ ...b, review: byBooking.get(b.id) ?? null }))
     }
   } catch {}
 
   const name = profile.full_name?.trim() || 'there'
   const since = memberSince(profile.created_at)
-  const openTrips = bookings.filter(booking => OPEN_STATUSES.includes(booking.status))
-  const waitingOnYou = openTrips.filter(booking => booking.status === 'matched' && booking.nanny_id && !booking.parent_confirmed_at)
-  const completed = bookings.filter(booking => booking.status === 'completed').length
+  const openTrips = bookings.filter((booking) => OPEN_STATUSES.includes(booking.status))
+  const waitingOnYou = openTrips.filter(
+    (booking) =>
+      booking.status === 'matched' && booking.nanny_id && !booking.parent_confirmed_at,
+  )
+  const completed = bookings.filter((booking) => booking.status === 'completed').length
   const now = new Date()
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const nextTrip = [...openTrips].sort((a, b) => a.check_in.localeCompare(b.check_in))
-    .find(booking => booking.check_in >= today)
-    ?? [...openTrips].sort((a, b) => a.check_in.localeCompare(b.check_in))[0]
+  const nextTrip =
+    [...openTrips]
+      .sort((a, b) => a.check_in.localeCompare(b.check_in))
+      .find((booking) => booking.check_in >= today) ??
+    [...openTrips].sort((a, b) => a.check_in.localeCompare(b.check_in))[0]
 
   return (
     <PageShell>
@@ -93,13 +143,23 @@ export default async function AccountPage() {
         <header className="account-hero">
           <div className="account-identity">
             <div className="account-avatar">
-              {profile.avatar_url
-                ? <MediaImage className="account-avatar-img" src={profile.avatar_url} alt="" fill sizes="84px" />
-                : <span>{initials(profile.full_name || '')}</span>}
+              {profile.avatar_url ? (
+                <MediaImage
+                  className="account-avatar-img"
+                  src={profile.avatar_url}
+                  alt=""
+                  fill
+                  sizes="84px"
+                />
+              ) : (
+                <span>{initials(profile.full_name || '')}</span>
+              )}
             </div>
             <div>
               <p className="account-kicker">Family account</p>
-              <h1>Hello, <em>{name}</em></h1>
+              <h1>
+                Hello, <em>{name}</em>
+              </h1>
               <p className="account-meta">
                 {profile.email || 'Signed in'}
                 {profile.phone ? ` · ${profile.phone}` : ''}
@@ -108,7 +168,9 @@ export default async function AccountPage() {
             </div>
           </div>
           <div className="account-hero-actions">
-            <Link href="/nannies" className="btn-coral">Book a nanny</Link>
+            <Link href="/nannies" className="btn-coral">
+              Book a nanny
+            </Link>
             <SignOutButton />
           </div>
         </header>
@@ -120,7 +182,9 @@ export default async function AccountPage() {
           </article>
           <article className={waitingOnYou.length ? 'is-attention' : undefined}>
             <span>{waitingOnYou.length}</span>
-            <small>{waitingOnYou.length === 1 ? 'Match to confirm' : 'Matches to confirm'}</small>
+            <small>
+              {waitingOnYou.length === 1 ? 'Match to confirm' : 'Matches to confirm'}
+            </small>
           </article>
           <article>
             <span>{completed}</span>
@@ -131,7 +195,9 @@ export default async function AccountPage() {
         {nextTrip && (
           <p className="account-next">
             Next trip · <strong>{nextTrip.destination}</strong> · {tripWhen(nextTrip)}
-            {nextTrip.nannies?.display_name ? ` · ${nextTrip.nannies.display_name}` : ' · Awaiting a nanny'}
+            {nextTrip.nannies?.display_name
+              ? ` · ${nextTrip.nannies.display_name}`
+              : ' · Awaiting a nanny'}
           </p>
         )}
 
@@ -139,9 +205,15 @@ export default async function AccountPage() {
           <section className="account-trips" aria-labelledby="account-trips-title">
             <div className="account-section-head">
               <h2 id="account-trips-title">Your trips</h2>
-              <p>Confirm matches, message your nanny, reschedule, or review a completed stay.</p>
+              <p>
+                Confirm matches, message your nanny, reschedule, or review a completed
+                stay.
+              </p>
             </div>
             <FamilyBookings bookings={bookings} />
+            {careEnquiries.map((enquiry) => (
+              <CareEnquiryView key={enquiry.id} enquiry={enquiry} />
+            ))}
           </section>
           <AccountProfileForm profile={profile} />
         </div>

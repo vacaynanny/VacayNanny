@@ -11,9 +11,27 @@ export const CARE_TYPES: {
   multiplier: number
   hint: string
 }[] = [
-  { id: 'standard', label: 'Standard (8 hours)', hours: 8, multiplier: 1, hint: 'Daytime shift included in the daily rate.' },
-  { id: 'extended', label: 'Extended (12 hours)', hours: 12, multiplier: 1.5, hint: 'Four extra hours billed at 1.5× the daily rate.' },
-  { id: 'overnight', label: 'Overnight care', hours: 16, multiplier: 2, hint: 'Overnight placement billed at 2× the daily rate.' },
+  {
+    id: 'standard',
+    label: 'Standard (8 hours)',
+    hours: 8,
+    multiplier: 1,
+    hint: 'Daytime shift included in the daily rate.',
+  },
+  {
+    id: 'extended',
+    label: 'Extended (12 hours)',
+    hours: 12,
+    multiplier: 1.5,
+    hint: 'Four extra hours billed at 1.5× the daily rate.',
+  },
+  {
+    id: 'overnight',
+    label: 'Overnight care',
+    hours: 16,
+    multiplier: 2,
+    hint: 'Overnight placement billed at 2× the daily rate.',
+  },
 ]
 
 export function parseCareType(value: unknown): CareType {
@@ -71,7 +89,9 @@ export function addUtcDays(iso: string, days: number): string {
 }
 
 export function nightsOfCare(checkIn: string, checkOut: string): number {
-  const days = Math.round((parseIsoDateUtc(checkOut) - parseIsoDateUtc(checkIn)) / 86400000)
+  const days = Math.round(
+    (parseIsoDateUtc(checkOut) - parseIsoDateUtc(checkIn)) / 86400000,
+  )
   return Math.max(1, days || 1)
 }
 
@@ -89,7 +109,10 @@ export function datesOverlap(
   bIn: string,
   bOut: string,
 ): boolean {
-  return aIn.slice(0, 10) < careRangeEnd(bIn, bOut) && bIn.slice(0, 10) < careRangeEnd(aIn, aOut)
+  return (
+    aIn.slice(0, 10) < careRangeEnd(bIn, bOut) &&
+    bIn.slice(0, 10) < careRangeEnd(aIn, aOut)
+  )
 }
 
 export function eachCareDate(checkIn: string, checkOut: string): string[] {
@@ -119,33 +142,53 @@ export function quoteBooking(opts: {
   maxNannies?: number
   /** When true, a missing catalog rate stays unset instead of using the built-in tier table. */
   strictRates?: boolean
-}): { nights: number; dailyRate: number; multiplier: number; nannyCount: number; addonTotal: number; total: number } {
+}): {
+  nights: number
+  dailyRate: number
+  multiplier: number
+  nannyCount: number
+  addonTotal: number
+  total: number
+} {
   const nights = nightsOfCare(opts.checkIn, opts.checkOut)
   const tier = normalizeTier(opts.tier) || 'bronze'
-  const dailyRate = positiveRate(opts.dailyRateKes)
-    ?? positiveRate(opts.rates?.tierRates?.[tier])
-    ?? (opts.strictRates ? 0 : TIER_RATES[tier])
+  const dailyRate =
+    positiveRate(opts.dailyRateKes) ??
+    positiveRate(opts.rates?.tierRates?.[tier]) ??
+    (opts.strictRates ? 0 : TIER_RATES[tier])
   const listedMultiplier = opts.rates?.careMultipliers?.[opts.careType]
-  const multiplier = listedMultiplier && listedMultiplier > 0
-    ? listedMultiplier
-    : (opts.strictRates ? (opts.careType === 'standard' ? 1 : 0) : careTypeMultiplier(opts.careType))
+  const multiplier =
+    listedMultiplier && listedMultiplier > 0
+      ? listedMultiplier
+      : opts.strictRates
+        ? opts.careType === 'standard'
+          ? 1
+          : 0
+        : careTypeMultiplier(opts.careType)
   const nannyCount = nannyCountFromNeeded(opts.nanniesNeeded, opts.maxNannies)
   const selected = new Set(opts.addonCodes || [])
   const addonTotal = (opts.rates?.addons || [])
-    .filter(addon => selected.has(addon.code))
+    .filter((addon) => selected.has(addon.code))
     .reduce((sum, addon) => sum + addon.amountKes, 0)
-  const total = dailyRate > 0 && multiplier > 0
-    ? Math.round(dailyRate * nights * multiplier * nannyCount) + addonTotal
-    : 0
+  const total =
+    dailyRate > 0 && multiplier > 0
+      ? Math.round(dailyRate * nights * multiplier * nannyCount) + addonTotal
+      : 0
   return { nights, dailyRate, multiplier, nannyCount, addonTotal, total }
 }
 
-export function quoteSummary(quote: ReturnType<typeof quoteBooking>, careType: CareType, careLabel?: string | null): string {
-  if (quote.dailyRate <= 0 || quote.multiplier <= 0) return 'Published rates are not available for this request yet.'
+export function quoteSummary(
+  quote: ReturnType<typeof quoteBooking>,
+  careType: CareType,
+  careLabel?: string | null,
+): string {
+  if (quote.dailyRate <= 0 || quote.multiplier <= 0)
+    return 'Published rates are not available for this request yet.'
   const days = quote.nights === 1 ? '1 day' : `${quote.nights} days`
   const nannies = quote.nannyCount === 1 ? '1 nanny' : `${quote.nannyCount} nannies`
   const base = `${formatKes(quote.total)} · ${days} · ${careTypeLabel(careType, careLabel)} · ${nannies}`
-  if (quote.addonTotal > 0) return `${base} · includes ${formatKes(quote.addonTotal)} in add-ons`
+  if (quote.addonTotal > 0)
+    return `${base} · includes ${formatKes(quote.addonTotal)} in add-ons`
   return base
 }
 
@@ -165,17 +208,30 @@ export function placementEndAt(checkIn: string, checkOut: string): Date {
 
 /** Next status if check-in/out has elapsed. Never moves a booking backwards. */
 export function dueBookingStatus(
-  booking: { status: BookingStatus; check_in: string; check_out: string },
+  booking: {
+    status: BookingStatus
+    check_in: string
+    check_out: string
+    payment_status?: string
+  },
   now = new Date(),
 ): BookingStatus | null {
   switch (booking.status) {
     case 'confirmed': {
-      if (now.getTime() >= placementEndAt(booking.check_in, booking.check_out).getTime()) return 'completed'
-      if (now.getTime() >= placementStartAt(booking.check_in).getTime()) return 'in_progress'
+      if (
+        booking.payment_status &&
+        !['paid', 'not_required'].includes(booking.payment_status)
+      )
+        return null
+      if (now.getTime() >= placementEndAt(booking.check_in, booking.check_out).getTime())
+        return 'completed'
+      if (now.getTime() >= placementStartAt(booking.check_in).getTime())
+        return 'in_progress'
       return null
     }
     case 'in_progress': {
-      if (now.getTime() >= placementEndAt(booking.check_in, booking.check_out).getTime()) return 'completed'
+      if (now.getTime() >= placementEndAt(booking.check_in, booking.check_out).getTime())
+        return 'completed'
       return null
     }
     case 'pending':
@@ -190,7 +246,10 @@ export function dueBookingStatus(
   }
 }
 
-export function bookingHasThread(booking: { nanny_id?: string | null; status: BookingStatus }): boolean {
+export function bookingHasThread(booking: {
+  nanny_id?: string | null
+  status: BookingStatus
+}): boolean {
   if (!booking.nanny_id) return false
   switch (booking.status) {
     case 'matched':
@@ -211,7 +270,10 @@ export function bookingHasThread(booking: { nanny_id?: string | null; status: Bo
 export function cancellationRefundPercent(
   checkIn: string,
   now = new Date(),
-  policy?: Pick<BusinessPolicies, 'cancellationFullHours' | 'cancellationPartialHours' | 'cancellationPartialPercent'>,
+  policy?: Pick<
+    BusinessPolicies,
+    'cancellationFullHours' | 'cancellationPartialHours' | 'cancellationPartialPercent'
+  >,
 ): number {
   const hours = hoursUntilCheckIn(checkIn, now)
   const full = policy?.cancellationFullHours ?? 48
@@ -224,13 +286,17 @@ export function cancellationRefundPercent(
 
 export function refundPolicyLabel(
   percent: number,
-  policy?: Pick<BusinessPolicies, 'cancellationFullHours' | 'cancellationPartialHours' | 'cancellationPartialPercent'>,
+  policy?: Pick<
+    BusinessPolicies,
+    'cancellationFullHours' | 'cancellationPartialHours' | 'cancellationPartialPercent'
+  >,
 ): string {
   const full = policy?.cancellationFullHours ?? 48
   const partial = policy?.cancellationPartialHours ?? 24
   const partialPercent = policy?.cancellationPartialPercent ?? 50
   if (percent === 100) return `Full refund (${full}+ hours before start)`
-  if (percent === partialPercent) return `${percent}% refund (${partial}–${full} hours before start)`
+  if (percent === partialPercent)
+    return `${percent}% refund (${partial}–${full} hours before start)`
   if (percent === 0) return `No refund (under ${partial} hours)`
   return `${percent}% refund`
 }
@@ -262,7 +328,10 @@ export function replacementSlaMs(hours?: number): number {
   return value * 60 * 60 * 1000
 }
 
-export function replacementDeadline(requestedAt: string, slaMs = REPLACEMENT_SLA_MS): Date {
+export function replacementDeadline(
+  requestedAt: string,
+  slaMs = REPLACEMENT_SLA_MS,
+): Date {
   return new Date(new Date(requestedAt).getTime() + slaMs)
 }
 
@@ -270,8 +339,10 @@ export function isReplacementOpen(booking: {
   replacement_requested_at?: string | null
   replacement_fulfilled_at?: string | null
   nanny_id?: string | null
+  booking_assignments?: Array<{ nanny_id: string }>
+  nannies_needed?: string
 }): boolean {
-  return Boolean(booking.replacement_requested_at && !booking.replacement_fulfilled_at && !booking.nanny_id)
+  return Boolean(booking.replacement_requested_at && !booking.replacement_fulfilled_at)
 }
 
 export function isReplacementOverdue(
@@ -284,7 +355,10 @@ export function isReplacementOverdue(
   slaMs = REPLACEMENT_SLA_MS,
 ): boolean {
   if (!isReplacementOpen(booking) || !booking.replacement_requested_at) return false
-  return now.getTime() >= replacementDeadline(booking.replacement_requested_at, slaMs).getTime()
+  return (
+    now.getTime() >=
+    replacementDeadline(booking.replacement_requested_at, slaMs).getTime()
+  )
 }
 
 export function statusLabel(status: BookingStatus): string {

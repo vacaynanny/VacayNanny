@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BookingReviewForm from '@/components/BookingReviewForm'
 import BookingThread from '@/components/BookingThread'
+import BookingPayment from '@/components/BookingPayment'
 import {
   bookingHasThread,
   canLeaveReview,
@@ -49,7 +50,11 @@ function formatTripRange(checkIn: string, checkOut: string) {
     month: 'short',
     year: sameYear ? undefined : 'numeric',
   })
-  const endLabel = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const endLabel = end.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
   return `${startLabel} – ${endLabel}`
 }
 
@@ -61,7 +66,13 @@ function tripNights(checkIn: string, checkOut: string) {
   return nights > 0 ? nights : null
 }
 
-export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
+export default function FamilyBookings({
+  bookings,
+  guestToken,
+}: {
+  bookings: Booking[]
+  guestToken?: string
+}) {
   const router = useRouter()
   const policies = useSiteCatalog().policies
   const [busy, setBusy] = useState<string | null>(null)
@@ -75,7 +86,10 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
     try {
       const res = await fetch(`/api/booking/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(guestToken ? { Authorization: `Bearer ${guestToken}` } : {}),
+        },
         body: JSON.stringify({ action, ...extra }),
       })
       const json = await res.json().catch(() => ({}))
@@ -85,6 +99,8 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
       }
       setRescheduleId(null)
       router.refresh()
+    } catch {
+      setError('We could not reach the server. Please try again.')
     } finally {
       setBusy(null)
     }
@@ -94,8 +110,13 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
     return (
       <div className="trip-empty">
         <h3>No trips yet</h3>
-        <p>Search nannies and send a request. Matches, messages, and reviews will show up here.</p>
-        <Link href="/nannies" className="btn-coral">Find a nanny</Link>
+        <p>
+          Search nannies and send a request. Matches, messages, and reviews will show up
+          here.
+        </p>
+        <Link href="/nannies" className="btn-coral">
+          Find a nanny
+        </Link>
       </div>
     )
   }
@@ -103,15 +124,32 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
   return (
     <div className="trip-list">
       {error && <p className="field-error-msg trip-error">{error}</p>}
-      {bookings.map(b => {
+      {bookings.map((b) => {
         const care = parseCareType(b.care_type)
-        const canConfirm = b.status === 'matched' && Boolean(b.nanny_id) && !b.parent_confirmed_at
-        const canCancel = b.status === 'pending' || b.status === 'matched' || b.status === 'confirmed'
+        const canConfirm =
+          b.status === 'matched' &&
+          Boolean(b.nanny_id) &&
+          (!b.booking_assignments ||
+            b.booking_assignments.length === Number(b.nannies_needed)) &&
+          !b.parent_confirmed_at
+        const canCancel =
+          b.status === 'pending' || b.status === 'matched' || b.status === 'confirmed'
         const canReschedule = canCancel
         const refund = cancellationRefundPercent(b.check_in, new Date(), policies)
-        const nannyName = b.nannies?.display_name
+        const nannyName = b.booking_assignments?.length
+          ? b.booking_assignments
+              .map((a) => a.nannies?.display_name || 'Assigned nanny')
+              .join(' & ')
+          : b.nannies?.display_name
         const nights = tripNights(b.check_in, b.check_out)
-        const family = [b.children_count ? `${b.children_count} ${b.children_count === '1' ? 'child' : 'children'}` : '', b.youngest_age].filter(Boolean).join(' · ')
+        const family = [
+          b.children_count
+            ? `${b.children_count} ${b.children_count === '1' ? 'child' : 'children'}`
+            : '',
+          b.youngest_age,
+        ]
+          .filter(Boolean)
+          .join(' · ')
         return (
           <article className={`trip-card${canConfirm ? ' needs-you' : ''}`} key={b.id}>
             <div className="trip-card-head">
@@ -122,7 +160,9 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
                 </p>
                 <h3>{b.destination}</h3>
               </div>
-              <span className={`trip-pill trip-pill-${b.status}`}>{statusLabel(b.status)}</span>
+              <span className={`trip-pill trip-pill-${b.status}`}>
+                {statusLabel(b.status)}
+              </span>
             </div>
             <dl className="trip-facts">
               <div>
@@ -141,45 +181,95 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
               )}
               <div>
                 <dt>Estimate</dt>
-                <dd className="trip-price">{b.total_amount_kes != null ? formatKes(b.total_amount_kes) : '—'}</dd>
+                <dd className="trip-price">
+                  {b.total_amount_kes != null ? formatKes(b.total_amount_kes) : '—'}
+                </dd>
               </div>
             </dl>
             {(b.parent_confirmed_at || b.nanny_response || b.status === 'cancelled') && (
               <ul className="trip-notes">
                 {b.parent_confirmed_at && <li>You confirmed this match.</li>}
-                {b.nanny_response && <li>{nannyReply(b.nanny_response)}</li>}
-                {b.status === 'cancelled' && <li>{refundPolicyLabel(b.refund_percent ?? 0, policies)}</li>}
+                {b.booking_assignments?.map((assignment) => (
+                  <li key={assignment.slot}>
+                    {assignment.nannies?.display_name || 'Nanny'}:{' '}
+                    {assignment.response === 'accepted'
+                      ? 'Accepted'
+                      : 'Awaiting response'}
+                  </li>
+                ))}
+                {!b.booking_assignments?.length && b.nanny_response && (
+                  <li>{nannyReply(b.nanny_response)}</li>
+                )}
+                {b.status === 'cancelled' && (
+                  <li>{refundPolicyLabel(b.refund_percent ?? 0, policies)}</li>
+                )}
               </ul>
             )}
-            {canConfirm && nannyName && <p className="trip-prompt">Confirm this match to lock in {nannyName}.</p>}
+            {canConfirm && nannyName && (
+              <p className="trip-prompt">Confirm this match to lock in {nannyName}.</p>
+            )}
+            {b.match_expires_at && b.status === 'matched' && (
+              <p className="trip-notes">
+                Proposal valid until{' '}
+                {new Date(b.match_expires_at).toLocaleString('en-KE', {
+                  timeZone: 'Africa/Nairobi',
+                })}{' '}
+                EAT.
+              </p>
+            )}
+            {b.status === 'matched' &&
+              Number(b.nannies_needed) > (b.booking_assignments?.length || 0) && (
+                <p className="trip-notes">
+                  {b.booking_assignments?.length || 0} of {b.nannies_needed} nannies
+                  proposed. Our team will complete your care team before you confirm.
+                </p>
+              )}
+            <BookingPayment booking={b} token={guestToken} />
             {(canConfirm || canReschedule || canCancel) && (
-            <div className="booking-actions">
-              {canConfirm && (
-                <button className="btn-coral" disabled={busy === b.id} onClick={() => act(b.id, 'confirm')}>
-                  Confirm match
-                </button>
-              )}
-              {canReschedule && (
-                <button className="btn-ghost" disabled={busy === b.id} onClick={() => {
-                  setRescheduleId(rescheduleId === b.id ? null : b.id)
-                  setDates({ checkIn: b.check_in, checkOut: b.check_out })
-                }}>
-                  Reschedule
-                </button>
-              )}
-              {canCancel && (
-                <button className="btn-ghost" disabled={busy === b.id} onClick={() => {
-                  if (confirm(`Cancel this booking? ${refundPolicyLabel(refund, policies)}.`)) act(b.id, 'cancel')
-                }}>
-                  Cancel
-                </button>
-              )}
-            </div>
+              <div className="booking-actions">
+                {canConfirm && (
+                  <button
+                    className="btn-coral"
+                    disabled={busy === b.id}
+                    onClick={() => act(b.id, 'confirm')}
+                  >
+                    Confirm match
+                  </button>
+                )}
+                {canReschedule && (
+                  <button
+                    className="btn-ghost"
+                    disabled={busy === b.id}
+                    onClick={() => {
+                      setRescheduleId(rescheduleId === b.id ? null : b.id)
+                      setDates({ checkIn: b.check_in, checkOut: b.check_out })
+                    }}
+                  >
+                    Reschedule
+                  </button>
+                )}
+                {canCancel && (
+                  <button
+                    className="btn-ghost"
+                    disabled={busy === b.id}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Cancel this booking? ${refundPolicyLabel(refund, policies)}.`,
+                        )
+                      )
+                        act(b.id, 'cancel')
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             )}
             {rescheduleId === b.id && (
               <form
                 className="reschedule-form"
-                onSubmit={e => {
+                onSubmit={(e) => {
                   e.preventDefault()
                   act(b.id, 'reschedule', dates)
                 }}
@@ -187,20 +277,39 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
                 <div className="mrow">
                   <div className="mfield">
                     <label>Check-in</label>
-                    <input type="date" required value={dates.checkIn} onChange={e => setDates(d => ({ ...d, checkIn: e.target.value }))} />
+                    <input
+                      type="date"
+                      required
+                      value={dates.checkIn}
+                      onChange={(e) =>
+                        setDates((d) => ({ ...d, checkIn: e.target.value }))
+                      }
+                    />
                   </div>
                   <div className="mfield">
                     <label>Check-out</label>
-                    <input type="date" required value={dates.checkOut} onChange={e => setDates(d => ({ ...d, checkOut: e.target.value }))} />
+                    <input
+                      type="date"
+                      required
+                      value={dates.checkOut}
+                      onChange={(e) =>
+                        setDates((d) => ({ ...d, checkOut: e.target.value }))
+                      }
+                    />
                   </div>
                 </div>
-                <button className="btn-coral" type="submit" disabled={busy === b.id}>Save dates</button>
+                <button className="btn-coral" type="submit" disabled={busy === b.id}>
+                  Save dates
+                </button>
               </form>
             )}
             {b.status === 'completed' && b.nanny_id && b.review && (
               <div className="posted-review">
                 <p className="review-form-title">Your review</p>
-                <div className="posted-review-stars">{'★'.repeat(b.review.rating)}{'☆'.repeat(5 - b.review.rating)}</div>
+                <div className="posted-review-stars">
+                  {'★'.repeat(b.review.rating)}
+                  {'☆'.repeat(5 - b.review.rating)}
+                </div>
                 <p>{b.review.body}</p>
                 <p className={`review-mod-status${b.review.is_published ? ' live' : ''}`}>
                   {b.review.is_published
@@ -212,8 +321,12 @@ export default function FamilyBookings({ bookings }: { bookings: Booking[] }) {
             {canLeaveReview(b) && (
               <BookingReviewForm bookingId={b.id} nannyName={nannyName} />
             )}
-            {bookingHasThread(b) && (
-              <BookingThread bookingId={b.id} viewerRole="parent" counterpartName={nannyName || undefined} />
+            {!guestToken && bookingHasThread(b) && (
+              <BookingThread
+                bookingId={b.id}
+                viewerRole="parent"
+                counterpartName={nannyName || undefined}
+              />
             )}
           </article>
         )

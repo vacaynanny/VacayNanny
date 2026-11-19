@@ -1,7 +1,13 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { createSupabaseBrowser } from '@/lib/supabase/browser'
+import { validateApplication } from '@/lib/application-validation'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
+import ImageSlideshow from '@/components/ImageSlideshow'
+import { applicationSlides } from '@/lib/marketing-slides'
+import CareIcon from '@/components/CareIcon'
+import styles from './Application.module.css'
 import { APPLICATION_FILE_MAX_BYTES } from '@/lib/application-files'
 import { APPLY_EXTRA_DESTINATIONS, mergeDestinationChoices } from '@/lib/destinations'
 import { useDestinationNames } from '@/lib/useDestinationNames'
@@ -12,16 +18,16 @@ const COUNTRY_CODES = [
   { flag: '🇺🇬', code: '+256', label: 'Uganda' },
   { flag: '🇹🇿', code: '+255', label: 'Tanzania' },
   { flag: '🇷🇼', code: '+250', label: 'Rwanda' },
-  { flag: '🇬🇧', code: '+44',  label: 'UK' },
-  { flag: '🇺🇸', code: '+1',   label: 'USA' },
+  { flag: '🇬🇧', code: '+44', label: 'UK' },
+  { flag: '🇺🇸', code: '+1', label: 'USA' },
 ]
 
 /* ── Kenya phone validation ── */
 function isValidKenyanNumber(phone: string): boolean {
   const cleaned = phone.replace(/\D/g, '')
   if (cleaned.length !== 9) return false
-  const validPrefixes = ['70','71','72','73','74','75','76','77','78','79','11']
-  return validPrefixes.some(p => cleaned.startsWith(p))
+  const validPrefixes = ['70', '71', '72', '73', '74', '75', '76', '77', '78', '79', '11']
+  return validPrefixes.some((p) => cleaned.startsWith(p))
 }
 
 /* ── Age validation (must be >= 21) ── */
@@ -49,23 +55,40 @@ const STEPS = [
 
 /* ── Checkbox group helper ── */
 function CheckItem({
-  label, checked, onChange,
-}: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
   return (
-    <div
-      className={`check-item${checked ? ' checked' : ''}`}
-      onClick={() => onChange(!checked)}
-    >
-      <div className={`check-box${checked ? ' checked' : ''}`}>{checked ? '✓' : ''}</div>
+    <label className={`check-item${checked ? ' checked' : ''}`}>
+      <input
+        className={styles.checkNative}
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span aria-hidden="true" className={`check-box${checked ? ' checked' : ''}`}>
+        {checked ? '✓' : ''}
+      </span>
       <span className="check-label">{label}</span>
-    </div>
+    </label>
   )
 }
 
 /* ── Radio card helper ── */
 function RadioCard({
-  label, selected, onClick,
-}: { label: string; selected: boolean; onClick: () => void }) {
+  label,
+  selected,
+  onClick,
+}: {
+  label: string
+  selected: boolean
+  onClick: () => void
+}) {
   return (
     <div className={`radio-card${selected ? ' selected' : ''}`} onClick={onClick}>
       <div className={`radio-dot${selected ? ' selected' : ''}`} />
@@ -76,26 +99,36 @@ function RadioCard({
 
 /* ── Phone input with country code ── */
 function PhoneInput({
-  value, onChange, countryCode, onCodeChange,
+  value,
+  onChange,
+  countryCode,
+  onCodeChange,
+  id,
 }: {
-  value: string; onChange: (v: string) => void;
-  countryCode: string; onCodeChange: (c: string) => void;
+  value: string
+  onChange: (v: string) => void
+  countryCode: string
+  onCodeChange: (c: string) => void
+  id?: string
 }) {
   const [open, setOpen] = useState(false)
-  const current = COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0]
+  const current = COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0]
   return (
     <div className="phone-wrap" style={{ position: 'relative' }}>
-      <div className="country-code-btn" onClick={() => setOpen(o => !o)}>
+      <div className="country-code-btn" onClick={() => setOpen((o) => !o)}>
         <span>{current.flag}</span>
         <span>{current.code}</span>
         <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>▼</span>
       </div>
       <div className={`cc-dropdown${open ? ' open' : ''}`}>
-        {COUNTRY_CODES.map(cc => (
+        {COUNTRY_CODES.map((cc) => (
           <div
             key={cc.code}
             className="cc-option"
-            onClick={() => { onCodeChange(cc.code); setOpen(false) }}
+            onClick={() => {
+              onCodeChange(cc.code)
+              setOpen(false)
+            }}
           >
             <span>{cc.flag}</span>
             <span>{cc.label}</span>
@@ -104,11 +137,17 @@ function PhoneInput({
         ))}
       </div>
       <input
+        id={id}
         type="tel"
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder="7xx xxx xxx"
-        style={{ background: 'transparent', border: 'none', borderRadius: '0 10px 10px 0', flex: 1 }}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          borderRadius: '0 10px 10px 0',
+          flex: 1,
+        }}
       />
     </div>
   )
@@ -116,9 +155,15 @@ function PhoneInput({
 
 /* ── Upload box ── */
 function UploadBox({
-  label, hint, name, onFile,
+  label,
+  hint,
+  name,
+  onFile,
 }: {
-  label: string; hint?: string; name: string;   onFile: (name: string, file: File | null) => boolean | void;
+  label: string
+  hint?: string
+  name: string
+  onFile: (name: string, file: File | null) => boolean | void
 }) {
   const [filename, setFilename] = useState('')
   return (
@@ -126,7 +171,7 @@ function UploadBox({
       <input
         type="file"
         accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*"
-        onChange={e => {
+        onChange={(e) => {
           const file = e.target.files?.[0] || null
           if (file && file.size > APPLICATION_FILE_MAX_BYTES) {
             e.currentTarget.value = ''
@@ -225,7 +270,7 @@ function writeDraft(next: NannyDraft) {
   } catch {
     // Private browsing can reject storage; the form still works for this visit.
   }
-  draftListeners.forEach(listener => listener())
+  draftListeners.forEach((listener) => listener())
 }
 
 function useNannyDraft() {
@@ -235,8 +280,11 @@ function useNannyDraft() {
 
 /* ── Main component ── */
 export default function BecomeANanny() {
+  const formPanel = useRef<HTMLDivElement>(null)
+  const submissionKey = useRef<string>(globalThis.crypto?.randomUUID?.() || '')
   const draft = useNannyDraft()
   const { firstName, lastName, dob, gender, phone, email, county, town, step } = draft
+  const previousStep = useRef(step)
   function patchDraft(partial: Partial<NannyDraft>) {
     writeDraft({ ...parseDraft(readDraftRaw()), ...partial })
   }
@@ -252,7 +300,28 @@ export default function BecomeANanny() {
 
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
   const [errors, setErrors] = useState<string[]>([])
+
+  function scrollToForm() {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (window.matchMedia('(min-width: 981px)').matches) {
+      formPanel.current?.scrollTo({ top: 0, behavior: reduced ? 'instant' : 'smooth' })
+    } else {
+      document
+        .getElementById('application-form')
+        ?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth', block: 'start' })
+    }
+  }
+
+  useEffect(() => {
+    if (previousStep.current === step) return
+    previousStep.current = step
+    scrollToForm()
+    formPanel.current
+      ?.querySelector<HTMLElement>('.step-header h2')
+      ?.focus({ preventScroll: true })
+  }, [step])
 
   // ── Form state ──
   const [countryCode, setCountryCode] = useState('+254')
@@ -304,7 +373,10 @@ export default function BecomeANanny() {
   const [willingTravel, setWillingTravel] = useState('')
   const [prefLocations, setPrefLocations] = useState<string[]>([])
   const catalogDestinations = useDestinationNames()
-  const locationChoices = mergeDestinationChoices(catalogDestinations, [...APPLY_EXTRA_DESTINATIONS, ...prefLocations])
+  const locationChoices = mergeDestinationChoices(catalogDestinations, [
+    ...APPLY_EXTRA_DESTINATIONS,
+    ...prefLocations,
+  ])
   const [comfortPets, setComfortPets] = useState('')
   const [comfortMultiple, setComfortMultiple] = useState('')
 
@@ -314,14 +386,14 @@ export default function BecomeANanny() {
   const [consent3, setConsent3] = useState(false)
 
   function toggleArr(arr: string[], val: string, set: (a: string[]) => void) {
-    set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
+    set(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val])
   }
 
   function handleUpload(name: string, file: File | null) {
     if (file && file.size > APPLICATION_FILE_MAX_BYTES) {
       setErrors(['Each file must be 5 MB or smaller.'])
-      setUploads(u => ({ ...u, [name]: false }))
-      setFiles(f => {
+      setUploads((u) => ({ ...u, [name]: false }))
+      setFiles((f) => {
         const next = { ...f }
         delete next[name]
         return next
@@ -329,8 +401,8 @@ export default function BecomeANanny() {
       return false
     }
     if (file) setErrors([])
-    setUploads(u => ({ ...u, [name]: !!file }))
-    setFiles(f => {
+    setUploads((u) => ({ ...u, [name]: !!file }))
+    setFiles((f) => {
       const next = { ...f }
       if (file) next[name] = file
       else delete next[name]
@@ -349,7 +421,8 @@ export default function BecomeANanny() {
       else if (!checkAge(dob)) errs.push('You must be at least 21 years old to apply.')
       if (!gender) errs.push('Gender is required.')
       if (!phone.trim()) errs.push('Phone number is required.')
-      else if (countryCode === '+254' && !isValidKenyanNumber(phone)) errs.push('Enter a valid Kenyan phone number (e.g. 07xx or 011x).')
+      else if (countryCode === '+254' && !isValidKenyanNumber(phone))
+        errs.push('Enter a valid Kenyan phone number (e.g. 07xx or 011x).')
       if (!email.trim()) errs.push('Email is required.')
       else if (!/\S+@\S+\.\S+/.test(email)) errs.push('Enter a valid email address.')
       if (!county.trim()) errs.push('County is required.')
@@ -376,7 +449,11 @@ export default function BecomeANanny() {
       if (!ref1Phone.trim()) errs.push('Reference 1 phone is required.')
       if (!ref2Name.trim()) errs.push('Reference 2 name is required.')
       if (!ref2Phone.trim()) errs.push('Reference 2 phone is required.')
-      if (ref1Email && ref2Email && ref1Email.trim().toLowerCase() === ref2Email.trim().toLowerCase())
+      if (
+        ref1Email &&
+        ref2Email &&
+        ref1Email.trim().toLowerCase() === ref2Email.trim().toLowerCase()
+      )
         errs.push('Reference emails must be different.')
       if (ref1Phone.trim() === ref2Phone.trim())
         errs.push('Reference phone numbers must be different.')
@@ -396,18 +473,19 @@ export default function BecomeANanny() {
   function goStep(n: number) {
     if (n > step) {
       const errs = validate()
-      if (errs.length) { setErrors(errs); return }
+      if (errs.length) {
+        setErrors(errs)
+        scrollToForm()
+        return
+      }
     }
     setErrors([])
     setStep(n)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function submitForm() {
-    const errs = validate()
-    if (errs.length) { setErrors(errs); return }
-    setSubmitting(true)
     const payload = {
+      submissionKey: submissionKey.current,
       fullName: `${firstName} ${lastName}`,
       dateOfBirth: dob,
       phone,
@@ -426,8 +504,18 @@ export default function BecomeANanny() {
       services,
       bio,
       certifications: certifications.filter(Boolean),
-      ref1Name, ref1Relationship: ref1Rel, ref1Phone, ref1Email, ref1Employer, ref1Contact,
-      ref2Name, ref2Relationship: ref2Rel, ref2Phone, ref2Email, ref2Employer, ref2Contact,
+      ref1Name,
+      ref1Relationship: ref1Rel,
+      ref1Phone,
+      ref1Email,
+      ref1Employer,
+      ref1Contact,
+      ref2Name,
+      ref2Relationship: ref2Rel,
+      ref2Phone,
+      ref2Email,
+      ref2Employer,
+      ref2Contact,
       availableDays: availDays,
       earliestStart,
       latestEnd,
@@ -444,22 +532,67 @@ export default function BecomeANanny() {
       consentTerms: consent2,
       consentAccuracy: consent3,
     }
+    const mapKinds: Record<string, string> = {
+      headshot: 'photo',
+      nationalId: 'id_front',
+      nationalIdBack: 'id_back',
+      selfie: 'selfie',
+      cogc: 'cogc',
+      passport: 'passport',
+      certs: 'certificate',
+    }
+    const errors = validateApplication(
+      payload,
+      Object.keys(files).map((key) => mapKinds[key] || key),
+    )
+    if (errors.length) {
+      setErrors(errors)
+      scrollToForm()
+      return
+    }
+    setSubmitting(true)
+    setUploadProgress('Preparing private uploads…')
     try {
-      const fd = new FormData()
-      fd.append('payload', JSON.stringify(payload))
-      const map: Record<string, string> = {
-        headshot: 'photo',
-        nationalId: 'id_front',
-        nationalIdBack: 'id_back',
-        selfie: 'selfie',
-        cogc: 'cogc',
-        passport: 'passport',
-        certs: 'certificate',
-      }
-      Object.entries(files).forEach(([key, file]) => {
-        fd.append(map[key] || key, file)
+      const namedFiles = Object.entries(files).map(([key, file]) => ({
+        key: mapKinds[key] || key,
+        file,
+      }))
+      const preparation = await fetch('/api/apply/uploads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payload,
+          files: namedFiles.map(({ key, file }) => ({
+            key,
+            name: file.name,
+            size: file.size,
+          })),
+        }),
       })
-      const res = await fetch('/api/apply', { method: 'POST', body: fd })
+      const prepared = await preparation.json()
+      if (!preparation.ok)
+        throw new Error(prepared.error || 'Could not prepare your uploads.')
+      const storage = createSupabaseBrowser().storage
+      for (const [index, entry] of prepared.entries.entries()) {
+        setUploadProgress(
+          `Uploading document ${index + 1} of ${prepared.entries.length}…`,
+        )
+        const file = namedFiles.find((item) => item.key === entry.key)?.file
+        if (!file) throw new Error('A required file is missing.')
+        const { error } = await storage
+          .from(entry.bucket)
+          .uploadToSignedUrl(entry.path, entry.token, file, { contentType: file.type })
+        if (error)
+          throw new Error(
+            'A document upload failed. Your application has not been submitted; please retry.',
+          )
+      }
+      setUploadProgress('Verifying and saving your complete application…')
+      const res = await fetch('/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manifest: prepared.manifest }),
+      })
       const data = await res.json().catch(() => null)
       if (res.ok) {
         setSubmitted(true)
@@ -468,14 +601,17 @@ export default function BecomeANanny() {
       } else {
         setErrors([data?.error || 'Submission failed. Please try again.'])
       }
-    } catch {
-      setErrors(['Network error. Please check your connection.'])
+    } catch (error) {
+      setErrors([
+        error instanceof Error
+          ? error.message
+          : 'Network error. Please check your connection.',
+      ])
     } finally {
       setSubmitting(false)
+      setUploadProgress('')
     }
   }
-
-  const progressPct = (step / (STEPS.length - 1)) * 100
 
   // ── Tier eligibility ──
   function getTierEligibility() {
@@ -493,17 +629,25 @@ export default function BecomeANanny() {
     return (
       <>
         <nav className="nav">
-          <Link href="/" className="nav-logo">Vacay<em>Nanny</em></Link>
+          <Link href="/" className="nav-logo">
+            Vacay<em>Nanny</em>
+          </Link>
         </nav>
         <div className="success-screen active" style={{ paddingTop: '8rem' }}>
           <div className="success-icon">✅</div>
           <h2>Application Submitted!</h2>
-          <p>Thank you, {firstName}! Your application has been received. Our team will review it within 3–5 business days and contact you via email and phone.</p>
-          <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Check <strong>{email}</strong> for your confirmation.</p>
+          <p>
+            Thank you, {firstName}! Your application has been received. Our team will
+            review your details, experience and documents, and contact you by email with
+            the next steps. Submitting an application does not approve your profile.
+          </p>
+          <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+            Check <strong>{email}</strong> for your confirmation.
+          </p>
           <div className="success-steps">
             <div className="success-step">
               <div className="success-step-num">1</div>
-              <p>Application review (3–5 business days)</p>
+              <p>Application and document review</p>
             </div>
             <div className="success-step">
               <div className="success-step-num">2</div>
@@ -515,11 +659,13 @@ export default function BecomeANanny() {
             </div>
             <div className="success-step">
               <div className="success-step-num">4</div>
-              <p>Profile goes live — start earning!</p>
+              <p>Sign your agreement, then receive profile activation</p>
             </div>
           </div>
           <div style={{ marginTop: '2.5rem' }}>
-            <Link href="/" className="btn-coral">Return to Home</Link>
+            <Link href="/" className="btn-coral">
+              Return to Home
+            </Link>
           </div>
         </div>
       </>
@@ -529,756 +675,1592 @@ export default function BecomeANanny() {
   return (
     <>
       <nav className="nav">
-        <Link href="/" className="nav-logo">Vacay<em>Nanny</em></Link>
-        <Link href="/" className="nav-back">← Back to Home</Link>
+        <Link href="/" className="nav-logo">
+          Vacay<em>Nanny</em>
+        </Link>
+        <Link href="/" className="nav-back">
+          ← Back to Home
+        </Link>
       </nav>
 
-      {/* HERO */}
-      <div className="page-hero">
-        <div className="eyebrow">Nanny Application</div>
-        <h1>Join the <em>VacayNanny</em> Family</h1>
-        <p>Apply to become a vetted holiday childcare professional. Work at Kenya&apos;s top resorts, earn premium rates, and build a career you love.</p>
-        <div className="tier-badges">
-          <div className="tier-badge bronze"><div className="tier-dot" /> Bronze · Entry Level</div>
-          <div className="tier-badge silver"><div className="tier-dot" /> Silver · Professional</div>
-          <div className="tier-badge gold"><div className="tier-dot" /> Gold · Elite</div>
-        </div>
-      </div>
-
-      {/* PROGRESS */}
-      <div className="progress-wrap">
-        <div className="progress-steps">
-          <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-          {STEPS.map((label, i) => (
-            <div
-              key={i}
-              className={`step-dot-wrap${i === step ? ' active' : ''}`}
-              onClick={() => i < step && goStep(i)}
-              style={{ cursor: i < step ? 'pointer' : 'default' }}
-            >
-              <div className={`step-dot${i === step ? ' active' : i < step ? ' done' : ''}`}>
-                {i < step ? '✓' : i + 1}
-              </div>
-              <span className="step-label">{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* FORM */}
-      <div className="form-container">
-        {errors.length > 0 && (
-          <div className="step-error">
-            <strong>Please fix the following:</strong>
-            <ul>{errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+      <main className={styles.application} id="main-content">
+        <aside className={styles.imagePanel} aria-label="A career built around care">
+          <ImageSlideshow
+            slides={applicationSlides}
+            label="Everyday childcare moments"
+            sizes="(max-width: 980px) 100vw, 50vw"
+            priority
+          />
+          <div className={styles.imageShade} />
+          <div className={styles.imageCopy}>
+            <CareIcon kind="sun" />
+            <p className={styles.imageEyebrow}>Good care makes room for good days</p>
+            <h2>
+              Your care.
+              <br />
+              <em>Their happy memories.</em>
+            </h2>
+            <p>
+              Bring your experience, your patience and the little things that make you,
+              you. There&apos;s a family looking for care like yours.
+            </p>
           </div>
-        )}
-
-        {/* ── STEP 1: Personal Info ── */}
-        {step === 0 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 1 of 8</div>
-              <h2>Personal Information</h2>
-              <p>Tell us about yourself. This information helps us match you with the right families.</p>
-            </div>
-            <div className="form-card">
-              <h3>Basic Details</h3>
-              <div className="field-row">
-                <div className="field">
-                  <label>First Name <span className="req">*</span></label>
-                  <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" />
-                </div>
-                <div className="field">
-                  <label>Last Name <span className="req">*</span></label>
-                  <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" />
-                </div>
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Date of Birth <span className="req">*</span></label>
-                  <input type="date" value={dob} onChange={e => setDob(e.target.value)} />
-                  <span className="field-hint">Must be 21 years or older.</span>
-                </div>
-                <div className="field">
-                  <label>Gender <span className="req">*</span></label>
-                  <select value={gender} onChange={e => setGender(e.target.value)}>
-                    <option value="">Select gender</option>
-                    <option>Female</option>
-                    <option>Male</option>
-                    <option>Non-binary</option>
-                    <option>Prefer not to say</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Contact Details</h3>
-              <div className="field-row">
-                <div className="field">
-                  <label>Phone Number <span className="req">*</span></label>
-                  <PhoneInput
-                    value={phone}
-                    onChange={setPhone}
-                    countryCode={countryCode}
-                    onCodeChange={setCountryCode}
-                  />
-                  <span className="field-hint">Kenyan numbers: 07xx or 011x format</span>
-                </div>
-                <div className="field">
-                  <label>Email Address <span className="req">*</span></label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jane@email.com" />
-                </div>
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>County <span className="req">*</span></label>
-                  <select value={county} onChange={e => setCounty(e.target.value)}>
-                    <option value="">Select county</option>
-                    {['Nairobi','Mombasa','Kwale','Kilifi','Tana River','Lamu','Taita-Taveta','Garissa','Wajir','Mandera','Marsabit','Isiolo','Meru','Tharaka-Nithi','Embu','Kitui','Machakos','Makueni','Nyandarua','Nyeri','Kirinyaga','Murang\'a','Kiambu','Turkana','West Pokot','Samburu','Trans-Nzoia','Uasin Gishu','Elgeyo-Marakwet','Nandi','Baringo','Laikipia','Nakuru','Narok','Kajiado','Kericho','Bomet','Kakamega','Vihiga','Bungoma','Busia','Siaya','Kisumu','Homa Bay','Migori','Kisii','Nyamira'].map(c => (
-                      <option key={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Town / City <span className="req">*</span></label>
-                  <input type="text" value={town} onChange={e => setTown(e.target.value)} placeholder="e.g. Diani Beach" />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Languages Spoken</h3>
-              <div className="check-grid">
-                {['English','Swahili','French','German','Italian','Spanish','Arabic','Chinese (Mandarin)','Sign Language'].map(lang => (
-                  <CheckItem
-                    key={lang} label={lang}
-                    checked={languages.includes(lang)}
-                    onChange={() => toggleArr(languages, lang, setLanguages)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Brief Bio <span className="optional-tag">Optional</span></h3>
-              <div className="field field-row single">
-                <label>Tell families about yourself</label>
-                <textarea
-                  value={bio}
-                  onChange={e => setBio(e.target.value)}
-                  placeholder="Describe your personality, childcare philosophy, and what families can expect from you..."
-                  style={{ minHeight: '120px' }}
-                />
-              </div>
-            </div>
-
-            <div className="btn-row">
-              <span />
-              <button className="btn-primary" onClick={() => goStep(1)}>Next: Identity →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 2: Identity ── */}
-        {step === 1 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 2 of 8</div>
-              <h2>Identity Verification</h2>
-              <p>We verify all nannies to keep families safe. Your documents are stored securely and never shared without your consent.</p>
-            </div>
-
-            <div className="info-note">
-              <span className="icon">🔒</span>
-              All documents are encrypted and stored securely. Used only for verification purposes.
-            </div>
-
-            <div className="form-card">
-              <h3>Government ID</h3>
-              <div className="field-row">
-                <div className="field">
-                  <label>National ID Number <span className="req">*</span></label>
-                  <input type="text" value={idNumber} onChange={e => setIdNumber(e.target.value)} placeholder="e.g. 12345678" />
-                </div>
-                <div className="field">
-                  <label>KRA PIN <span className="optional-tag">Optional</span></label>
-                  <input type="text" value={kraPin} onChange={e => setKraPin(e.target.value)} placeholder="A000000000Z" />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Document Uploads</h3>
-              <div className="upload-grid">
-                <UploadBox
-                  name="nationalId" label="Upload National ID (front)"
-                  hint="JPG, PNG or PDF · Max 5MB" onFile={handleUpload}
-                />
-                <UploadBox
-                  name="nationalIdBack" label="Upload National ID (back)"
-                  hint="JPG, PNG or PDF · Max 5MB" onFile={handleUpload}
-                />
-              </div>
-              <UploadBox
-                name="passport" label="Upload Passport Photo Page (optional)"
-                hint="Required for Gold-tier international travel nannies" onFile={handleUpload}
-              />
-            </div>
-
-            <div className="form-card">
-              <h3>Headshot Photo <span className="req">*</span></h3>
-              <UploadBox
-                name="headshot" label="Upload a clear headshot photo"
-                hint="JPG or PNG · Professional photo preferred · Max 5MB" onFile={handleUpload}
-              />
-            </div>
-
-            <div className="form-card">
-              <h3>Identity selfie <span className="req">*</span></h3>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-                Hold your National ID next to your face. Good lighting, face clearly visible.
+          <span className={styles.imageCredit}>AI-generated lifestyle illustration</span>
+        </aside>
+        <div
+          ref={formPanel}
+          className={styles.formPanel}
+          role="region"
+          aria-label="Nanny application form"
+          tabIndex={0}
+        >
+          <div className={styles.formInner}>
+            <header className={styles.header}>
+              <p className={styles.eyebrow}>Become a VacayNanny</p>
+              <h1>
+                Care comes naturally.
+                <br />
+                <em>Start here.</em>
+              </h1>
+              <p>
+                Tell us about yourself and the experience you bring. We&apos;ll guide you
+                through the rest, one step at a time.
               </p>
-              <UploadBox
-                name="selfie" label="Upload identity selfie"
-                hint="JPG or PNG · Face and ID both visible" onFile={handleUpload}
-              />
-            </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(0)}>← Back</button>
-              <button className="btn-primary" onClick={() => goStep(2)}>Next: Background →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 3: Background ── */}
-        {step === 2 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 3 of 8</div>
-              <h2>Background Check</h2>
-              <p>Police clearance is mandatory for all VacayNanny professionals. It protects both you and the families you work with.</p>
-            </div>
-
-            <div className="form-card">
-              <h3>Certificate of Good Conduct (CoGC)</h3>
-              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '16px', lineHeight: '1.55' }}>
-                A CoGC is issued by the Kenya Police Service and is valid for 1 year. You can apply online at <a href="https://www.ecitizen.go.ke" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--coral)' }}>eCitizen</a>.
-              </p>
-              <div className="radio-cards">
-                <RadioCard label="Yes, I have a valid CoGC" selected={cogcStatus === 'yes'} onClick={() => setCogcStatus('yes')} />
-                <RadioCard label="Mine is expired — I'm in the process of renewing" selected={cogcStatus === 'renewing'} onClick={() => setCogcStatus('renewing')} />
-                <RadioCard label="No, I don't have one yet" selected={cogcStatus === 'no'} onClick={() => setCogcStatus('no')} />
+              <div className={styles.introNote}>
+                <CareIcon kind="leaf" />
+                <span>
+                  Your details and documents are reviewed before your profile can be
+                  approved.
+                </span>
               </div>
-              {cogcStatus === 'yes' && (
-                <div className="field" style={{ marginTop: '16px' }}>
-                  <label>CoGC Issue Date</label>
-                  <input type="date" value={cogcDate} onChange={e => setCogcDate(e.target.value)} />
-                </div>
-              )}
-              {(cogcStatus === 'yes' || cogcStatus === 'renewing') && (
-                <div style={{ marginTop: '16px' }}>
-                  <UploadBox
-                    name="cogc" label="Upload your CoGC (optional at this stage)"
-                    hint="PDF, JPG or PNG · Max 5MB" onFile={handleUpload}
-                  />
-                </div>
-              )}
-              {cogcStatus === 'no' && (
-                <div className="info-note" style={{ marginTop: '16px' }}>
-                  <span className="icon">ℹ️</span>
-                  You can still apply — however you must obtain your CoGC before your first placement. We recommend applying via eCitizen immediately. Cost is approximately KES 1,050.
-                </div>
-              )}
-            </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(1)}>← Back</button>
-              <button className="btn-primary" onClick={() => goStep(3)}>Next: Experience →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 4: Experience ── */}
-        {step === 3 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 4 of 8</div>
-              <h2>Experience & Qualifications</h2>
-              <p>Your experience shapes which tier you qualify for. Be accurate — we verify with your references.</p>
-            </div>
-
-            <div className="form-card">
-              <h3>Experience</h3>
-              <div className="field-row">
-                <div className="field">
-                  <label>Years of Childcare Experience <span className="req">*</span></label>
-                  <select value={expYears} onChange={e => setExpYears(e.target.value)}>
-                    <option value="">Select</option>
-                    <option value="0">Less than 1 year</option>
-                    <option value="1">1 year</option>
-                    <option value="2">2 years</option>
-                    <option value="3">3 years</option>
-                    <option value="4">4 years</option>
-                    <option value="5">5 years</option>
-                    <option value="7">6–9 years</option>
-                    <option value="10">10+ years</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Age Groups You Can Care For <span className="req">*</span></h3>
-              <div className="check-grid">
-                {['Newborns (0–3 months)','Infants (3–12 months)','Toddlers (1–3 years)','Pre-schoolers (3–5 years)','School-age (6–10 years)','Pre-teens (11–14 years)','Teenagers (15+)'].map(ag => (
-                  <CheckItem
-                    key={ag} label={ag}
-                    checked={ageGroups.includes(ag)}
-                    onChange={() => toggleArr(ageGroups, ag, setAgeGroups)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Services You Provide <span className="req">*</span></h3>
-              <div className="check-grid">
-                {['General childcare','Infant/newborn care','Overnight care','Special needs care','Tutoring / homework help','Meal preparation','Activity coordination','Transport / driving','Swimming supervision','Arts & crafts','Multilingual teaching','Travel nanny (international)'].map(svc => (
-                  <CheckItem
-                    key={svc} label={svc}
-                    checked={services.includes(svc)}
-                    onChange={() => toggleArr(services, svc, setServices)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Certifications <span className="optional-tag">Optional but recommended</span></h3>
-              <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', marginBottom: '16px' }}>Add any childcare, first-aid, or education certificates you hold.</p>
-              {certifications.map((cert, i) => (
-                <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                  <input
-                    type="text"
-                    value={cert}
-                    onChange={e => {
-                      const next = [...certifications]; next[i] = e.target.value; setCertifications(next)
-                    }}
-                    placeholder={`Certificate ${i + 1} name`}
-                    style={{ flex: 1 }}
-                  />
-                  {certifications.length > 1 && (
+            </header>
+            <nav className={styles.progress} aria-label="Application progress">
+              <label className={styles.mobileProgress}>
+                <span>Your application</span>
+                <select
+                  aria-label="Application step"
+                  value={step}
+                  onChange={(event) => goStep(Number(event.target.value))}
+                >
+                  {STEPS.map((label, index) => (
+                    <option key={label} value={index} disabled={index > step}>
+                      {index + 1} of {STEPS.length} · {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ol>
+                {STEPS.map((label, index) => (
+                  <li key={label}>
                     <button
-                      onClick={() => setCertifications(certifications.filter((_, j) => j !== i))}
-                      style={{ background: 'rgba(220,60,60,0.15)', border: '1px solid rgba(220,60,60,0.3)', color: '#ff8a8a', borderRadius: '8px', padding: '10px 12px', cursor: 'pointer', fontSize: '0.8rem' }}
-                    >✕</button>
-                  )}
+                      type="button"
+                      disabled={index > step}
+                      aria-current={index === step ? 'step' : undefined}
+                      onClick={() => index < step && goStep(index)}
+                    >
+                      <span className={index < step ? styles.complete : ''}>
+                        {index < step ? '✓' : index + 1}
+                      </span>
+                      <span>{label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+            <div className={`form-container ${styles.form}`} id="application-form">
+              {errors.length > 0 && (
+                <div className="step-error" role="alert">
+                  <strong>Please fix the following:</strong>
+                  <ul>
+                    {errors.map((e, i) => (
+                      <li key={i}>{e}</li>
+                    ))}
+                  </ul>
                 </div>
-              ))}
-              <button
-                onClick={() => setCertifications([...certifications, ''])}
-                style={{ background: 'rgba(232,113,74,0.1)', border: '1px solid rgba(232,113,74,0.25)', color: 'var(--coral)', borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '0.83rem', marginTop: '4px', fontFamily: 'DM Sans, sans-serif' }}
-              >+ Add Certificate</button>
-              {certifications.some(Boolean) && (
-                <div style={{ marginTop: '16px' }}>
-                  <UploadBox
-                    name="certs" label="Upload certificate documents"
-                    hint="You can upload a single PDF with all certificates" onFile={handleUpload}
-                  />
+              )}
+
+              {/* ── STEP 1: Personal Info ── */}
+              {step === 0 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 1 of 8</div>
+                    <h2 tabIndex={-1}>Personal Information</h2>
+                    <p>
+                      Tell us about yourself. This information helps us match you with the
+                      right families.
+                    </p>
+                  </div>
+                  <div className="form-card">
+                    <h3>Basic Details</h3>
+                    <div className="field-row">
+                      <div className="field">
+                        <label htmlFor="app-first-name">
+                          First Name <span className="req">*</span>
+                        </label>
+                        <input
+                          id="app-first-name"
+                          autoComplete="given-name"
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          placeholder="Jane"
+                        />
+                      </div>
+                      <div className="field">
+                        <label htmlFor="app-last-name">
+                          Last Name <span className="req">*</span>
+                        </label>
+                        <input
+                          id="app-last-name"
+                          autoComplete="family-name"
+                          type="text"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          placeholder="Doe"
+                        />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label htmlFor="app-dob">
+                          Date of Birth <span className="req">*</span>
+                        </label>
+                        <input
+                          id="app-dob"
+                          autoComplete="bday"
+                          type="date"
+                          value={dob}
+                          onChange={(e) => setDob(e.target.value)}
+                        />
+                        <span className="field-hint">Must be 21 years or older.</span>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="app-gender">
+                          Gender <span className="req">*</span>
+                        </label>
+                        <select
+                          id="app-gender"
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                        >
+                          <option value="">Select gender</option>
+                          <option>Female</option>
+                          <option>Male</option>
+                          <option>Non-binary</option>
+                          <option>Prefer not to say</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Contact Details</h3>
+                    <div className="field-row">
+                      <div className="field">
+                        <label htmlFor="app-phone">
+                          Phone Number <span className="req">*</span>
+                        </label>
+                        <PhoneInput
+                          id="app-phone"
+                          value={phone}
+                          onChange={setPhone}
+                          countryCode={countryCode}
+                          onCodeChange={setCountryCode}
+                        />
+                        <span className="field-hint">
+                          Kenyan numbers: 07xx or 011x format
+                        </span>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="app-email">
+                          Email Address <span className="req">*</span>
+                        </label>
+                        <input
+                          id="app-email"
+                          autoComplete="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="jane@email.com"
+                        />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label htmlFor="app-county">
+                          County <span className="req">*</span>
+                        </label>
+                        <select
+                          id="app-county"
+                          value={county}
+                          onChange={(e) => setCounty(e.target.value)}
+                        >
+                          <option value="">Select county</option>
+                          {[
+                            'Nairobi',
+                            'Mombasa',
+                            'Kwale',
+                            'Kilifi',
+                            'Tana River',
+                            'Lamu',
+                            'Taita-Taveta',
+                            'Garissa',
+                            'Wajir',
+                            'Mandera',
+                            'Marsabit',
+                            'Isiolo',
+                            'Meru',
+                            'Tharaka-Nithi',
+                            'Embu',
+                            'Kitui',
+                            'Machakos',
+                            'Makueni',
+                            'Nyandarua',
+                            'Nyeri',
+                            'Kirinyaga',
+                            "Murang'a",
+                            'Kiambu',
+                            'Turkana',
+                            'West Pokot',
+                            'Samburu',
+                            'Trans-Nzoia',
+                            'Uasin Gishu',
+                            'Elgeyo-Marakwet',
+                            'Nandi',
+                            'Baringo',
+                            'Laikipia',
+                            'Nakuru',
+                            'Narok',
+                            'Kajiado',
+                            'Kericho',
+                            'Bomet',
+                            'Kakamega',
+                            'Vihiga',
+                            'Bungoma',
+                            'Busia',
+                            'Siaya',
+                            'Kisumu',
+                            'Homa Bay',
+                            'Migori',
+                            'Kisii',
+                            'Nyamira',
+                          ].map((c) => (
+                            <option key={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="app-town">
+                          Town / City <span className="req">*</span>
+                        </label>
+                        <input
+                          id="app-town"
+                          type="text"
+                          value={town}
+                          onChange={(e) => setTown(e.target.value)}
+                          placeholder="e.g. Diani Beach"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Languages Spoken</h3>
+                    <div className="check-grid">
+                      {[
+                        'English',
+                        'Swahili',
+                        'French',
+                        'German',
+                        'Italian',
+                        'Spanish',
+                        'Arabic',
+                        'Chinese (Mandarin)',
+                        'Sign Language',
+                      ].map((lang) => (
+                        <CheckItem
+                          key={lang}
+                          label={lang}
+                          checked={languages.includes(lang)}
+                          onChange={() => toggleArr(languages, lang, setLanguages)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Brief Bio <span className="optional-tag">Optional</span>
+                    </h3>
+                    <div className="field field-row single">
+                      <label>Tell families about yourself</label>
+                      <textarea
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Describe your personality, childcare philosophy, and what families can expect from you..."
+                        style={{ minHeight: '120px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="btn-row">
+                    <span />
+                    <button className="btn-primary" onClick={() => goStep(1)}>
+                      Next: Identity →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 2: Identity ── */}
+              {step === 1 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 2 of 8</div>
+                    <h2 tabIndex={-1}>Identity Verification</h2>
+                    <p>
+                      We verify all nannies to keep families safe. Your documents are
+                      stored securely and never shared without your consent.
+                    </p>
+                  </div>
+
+                  <div className="info-note">
+                    <span className="icon">🔒</span>
+                    All documents are encrypted and stored securely. Used only for
+                    verification purposes.
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Government ID</h3>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>
+                          National ID Number <span className="req">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={idNumber}
+                          onChange={(e) => setIdNumber(e.target.value)}
+                          placeholder="e.g. 12345678"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>
+                          KRA PIN <span className="optional-tag">Optional</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={kraPin}
+                          onChange={(e) => setKraPin(e.target.value)}
+                          placeholder="A000000000Z"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Document Uploads</h3>
+                    <div className="upload-grid">
+                      <UploadBox
+                        name="nationalId"
+                        label="Upload National ID (front)"
+                        hint="JPG, PNG or PDF · Max 5MB"
+                        onFile={handleUpload}
+                      />
+                      <UploadBox
+                        name="nationalIdBack"
+                        label="Upload National ID (back)"
+                        hint="JPG, PNG or PDF · Max 5MB"
+                        onFile={handleUpload}
+                      />
+                    </div>
+                    <UploadBox
+                      name="passport"
+                      label="Upload Passport Photo Page (optional)"
+                      hint="Required for Gold-tier international travel nannies"
+                      onFile={handleUpload}
+                    />
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Headshot Photo <span className="req">*</span>
+                    </h3>
+                    <UploadBox
+                      name="headshot"
+                      label="Upload a clear headshot photo"
+                      hint="JPG or PNG · Professional photo preferred · Max 5MB"
+                      onFile={handleUpload}
+                    />
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Identity selfie <span className="req">*</span>
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.85rem',
+                        color: 'rgba(23,50,77,0.5)',
+                        marginBottom: 16,
+                      }}
+                    >
+                      Hold your National ID next to your face. Good lighting, face clearly
+                      visible.
+                    </p>
+                    <UploadBox
+                      name="selfie"
+                      label="Upload identity selfie"
+                      hint="JPG or PNG · Face and ID both visible"
+                      onFile={handleUpload}
+                    />
+                  </div>
+
+                  <div className="btn-row">
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(0)}
+                    >
+                      ← Back
+                    </button>
+                    <button className="btn-primary" onClick={() => goStep(2)}>
+                      Next: Background →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 3: Background ── */}
+              {step === 2 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 3 of 8</div>
+                    <h2 tabIndex={-1}>Background Check</h2>
+                    <p>
+                      Police clearance is mandatory for all VacayNanny professionals. It
+                      protects both you and the families you work with.
+                    </p>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Certificate of Good Conduct (CoGC)</h3>
+                    <p
+                      style={{
+                        fontSize: '0.85rem',
+                        color: 'rgba(23,50,77,0.5)',
+                        marginBottom: '16px',
+                        lineHeight: '1.55',
+                      }}
+                    >
+                      A CoGC is issued by the Kenya Police Service and is valid for 1
+                      year. You can apply online at{' '}
+                      <a
+                        href="https://www.ecitizen.go.ke"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: 'var(--coral)' }}
+                      >
+                        eCitizen
+                      </a>
+                      .
+                    </p>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="Yes, I have a valid CoGC"
+                        selected={cogcStatus === 'yes'}
+                        onClick={() => setCogcStatus('yes')}
+                      />
+                      <RadioCard
+                        label="Mine is expired — I'm in the process of renewing"
+                        selected={cogcStatus === 'renewing'}
+                        onClick={() => setCogcStatus('renewing')}
+                      />
+                      <RadioCard
+                        label="No, I don't have one yet"
+                        selected={cogcStatus === 'no'}
+                        onClick={() => setCogcStatus('no')}
+                      />
+                    </div>
+                    {cogcStatus === 'yes' && (
+                      <div className="field" style={{ marginTop: '16px' }}>
+                        <label>CoGC Issue Date</label>
+                        <input
+                          type="date"
+                          value={cogcDate}
+                          onChange={(e) => setCogcDate(e.target.value)}
+                        />
+                      </div>
+                    )}
+                    {(cogcStatus === 'yes' || cogcStatus === 'renewing') && (
+                      <div style={{ marginTop: '16px' }}>
+                        <UploadBox
+                          name="cogc"
+                          label="Upload your CoGC (optional at this stage)"
+                          hint="PDF, JPG or PNG · Max 5MB"
+                          onFile={handleUpload}
+                        />
+                      </div>
+                    )}
+                    {cogcStatus === 'no' && (
+                      <div className="info-note" style={{ marginTop: '16px' }}>
+                        <span className="icon">ℹ️</span>
+                        You can still apply — however you must obtain your CoGC before
+                        your first placement. We recommend applying via eCitizen
+                        immediately. Cost is approximately KES 1,050.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="btn-row">
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(1)}
+                    >
+                      ← Back
+                    </button>
+                    <button className="btn-primary" onClick={() => goStep(3)}>
+                      Next: Experience →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 4: Experience ── */}
+              {step === 3 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 4 of 8</div>
+                    <h2 tabIndex={-1}>Experience & Qualifications</h2>
+                    <p>
+                      Your experience shapes which tier you qualify for. Be accurate — we
+                      verify with your references.
+                    </p>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Experience</h3>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>
+                          Years of Childcare Experience <span className="req">*</span>
+                        </label>
+                        <select
+                          value={expYears}
+                          onChange={(e) => setExpYears(e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option value="0">Less than 1 year</option>
+                          <option value="1">1 year</option>
+                          <option value="2">2 years</option>
+                          <option value="3">3 years</option>
+                          <option value="4">4 years</option>
+                          <option value="5">5 years</option>
+                          <option value="7">6–9 years</option>
+                          <option value="10">10+ years</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Age Groups You Can Care For <span className="req">*</span>
+                    </h3>
+                    <div className="check-grid">
+                      {[
+                        'Newborns (0–3 months)',
+                        'Infants (3–12 months)',
+                        'Toddlers (1–3 years)',
+                        'Pre-schoolers (3–5 years)',
+                        'School-age (6–10 years)',
+                        'Pre-teens (11–14 years)',
+                        'Teenagers (15+)',
+                      ].map((ag) => (
+                        <CheckItem
+                          key={ag}
+                          label={ag}
+                          checked={ageGroups.includes(ag)}
+                          onChange={() => toggleArr(ageGroups, ag, setAgeGroups)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Services You Provide <span className="req">*</span>
+                    </h3>
+                    <div className="check-grid">
+                      {[
+                        'General childcare',
+                        'Infant/newborn care',
+                        'Overnight care',
+                        'Special needs care',
+                        'Tutoring / homework help',
+                        'Meal preparation',
+                        'Activity coordination',
+                        'Transport / driving',
+                        'Swimming supervision',
+                        'Arts & crafts',
+                        'Multilingual teaching',
+                        'Travel nanny (international)',
+                      ].map((svc) => (
+                        <CheckItem
+                          key={svc}
+                          label={svc}
+                          checked={services.includes(svc)}
+                          onChange={() => toggleArr(services, svc, setServices)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Certifications{' '}
+                      <span className="optional-tag">Optional but recommended</span>
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.83rem',
+                        color: 'rgba(23,50,77,0.45)',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      Add any childcare, first-aid, or education certificates you hold.
+                    </p>
+                    {certifications.map((cert, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginBottom: '8px',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={cert}
+                          onChange={(e) => {
+                            const next = [...certifications]
+                            next[i] = e.target.value
+                            setCertifications(next)
+                          }}
+                          placeholder={`Certificate ${i + 1} name`}
+                          style={{ flex: 1 }}
+                        />
+                        {certifications.length > 1 && (
+                          <button
+                            onClick={() =>
+                              setCertifications(certifications.filter((_, j) => j !== i))
+                            }
+                            style={{
+                              background: 'rgba(220,60,60,0.15)',
+                              border: '1px solid rgba(220,60,60,0.3)',
+                              color: '#ff8a8a',
+                              borderRadius: '8px',
+                              padding: '10px 12px',
+                              cursor: 'pointer',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => setCertifications([...certifications, ''])}
+                      style={{
+                        background: 'rgba(232,113,74,0.1)',
+                        border: '1px solid rgba(232,113,74,0.25)',
+                        color: 'var(--coral)',
+                        borderRadius: '8px',
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                        fontSize: '0.83rem',
+                        marginTop: '4px',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                    >
+                      + Add Certificate
+                    </button>
+                    {certifications.some(Boolean) && (
+                      <div style={{ marginTop: '16px' }}>
+                        <UploadBox
+                          name="certs"
+                          label="Upload certificate documents"
+                          hint="You can upload a single PDF with all certificates"
+                          onFile={handleUpload}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="btn-row">
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(2)}
+                    >
+                      ← Back
+                    </button>
+                    <button className="btn-primary" onClick={() => goStep(4)}>
+                      Next: Skills →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 5: Skills ── */}
+              {step === 4 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 5 of 8</div>
+                    <h2 tabIndex={-1}>Skills & Abilities</h2>
+                    <p>Help families know exactly what you bring to their holiday.</p>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Swimming</h3>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="I cannot swim"
+                        selected={swimming === 'none'}
+                        onClick={() => setSwimming('none')}
+                      />
+                      <RadioCard
+                        label="I can swim (basic)"
+                        selected={swimming === 'basic'}
+                        onClick={() => setSwimming('basic')}
+                      />
+                      <RadioCard
+                        label="Strong swimmer — comfortable supervising children in pools/ocean"
+                        selected={swimming === 'strong'}
+                        onClick={() => setSwimming('strong')}
+                      />
+                      <RadioCard
+                        label="Certified lifeguard"
+                        selected={swimming === 'lifeguard'}
+                        onClick={() => setSwimming('lifeguard')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Cooking for Children</h3>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="Basic meal prep (simple dishes, reheating)"
+                        selected={cooking === 'basic'}
+                        onClick={() => setCooking('basic')}
+                      />
+                      <RadioCard
+                        label="Good cook — can prepare balanced children's meals"
+                        selected={cooking === 'good'}
+                        onClick={() => setCooking('good')}
+                      />
+                      <RadioCard
+                        label="Experienced — including dietary restrictions &amp; allergies"
+                        selected={cooking === 'experienced'}
+                        onClick={() => setCooking('experienced')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Tutoring / Educational Support</h3>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="Not applicable"
+                        selected={tutoring === 'none'}
+                        onClick={() => setTutoring('none')}
+                      />
+                      <RadioCard
+                        label="Basic homework help (primary school)"
+                        selected={tutoring === 'basic'}
+                        onClick={() => setTutoring('basic')}
+                      />
+                      <RadioCard
+                        label="Secondary school tutoring"
+                        selected={tutoring === 'secondary'}
+                        onClick={() => setTutoring('secondary')}
+                      />
+                      <RadioCard
+                        label="Montessori / early childhood education trained"
+                        selected={tutoring === 'montessori'}
+                        onClick={() => setTutoring('montessori')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Driving</h3>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="I don't drive"
+                        selected={driving === 'none'}
+                        onClick={() => setDriving('none')}
+                      />
+                      <RadioCard
+                        label="I hold a valid Kenyan driver's licence"
+                        selected={driving === 'kenya'}
+                        onClick={() => setDriving('kenya')}
+                      />
+                      <RadioCard
+                        label="I hold an international driver's licence"
+                        selected={driving === 'international'}
+                        onClick={() => setDriving('international')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Special Needs Experience</h3>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="No specific experience"
+                        selected={specialNeeds === 'none'}
+                        onClick={() => setSpecialNeeds('none')}
+                      />
+                      <RadioCard
+                        label="Some exposure (autism-friendly approaches)"
+                        selected={specialNeeds === 'some'}
+                        onClick={() => setSpecialNeeds('some')}
+                      />
+                      <RadioCard
+                        label="Trained — worked with children with disabilities"
+                        selected={specialNeeds === 'trained'}
+                        onClick={() => setSpecialNeeds('trained')}
+                      />
+                      <RadioCard
+                        label="Certified special needs educator / therapist"
+                        selected={specialNeeds === 'certified'}
+                        onClick={() => setSpecialNeeds('certified')}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tier eligibility preview */}
+                  <div className="form-card">
+                    <h3>Your Likely Tier Based on Application</h3>
+                    <div className="tier-cards">
+                      <div className={`tier-card bronze${tiers.bronze ? '' : ''}`}>
+                        <div className="tier-card-label">Bronze</div>
+                        <h4>Entry Level</h4>
+                        <div className="tier-req">
+                          <span className="dot">•</span> Any experience level
+                        </div>
+                        <div className="tier-req">
+                          <span className="dot">•</span> Valid national ID
+                        </div>
+                        <div className="tier-req">
+                          <span className="dot">•</span> CoGC (can apply later)
+                        </div>
+                        <div
+                          className={`tier-eligible-badge${tiers.bronze ? ' show' : ''}`}
+                        >
+                          Eligible ✓
+                        </div>
+                      </div>
+                      <div className={`tier-card silver`}>
+                        <div className="tier-card-label">Silver</div>
+                        <h4>Professional</h4>
+                        <div className="tier-req">
+                          <span className="dot">•</span> 2+ years experience
+                        </div>
+                        <div className="tier-req">
+                          <span className="dot">•</span> Valid CoGC
+                        </div>
+                        <div className="tier-req">
+                          <span className="dot">•</span> First-aid certified
+                        </div>
+                        <div
+                          className={`tier-eligible-badge${tiers.silver ? ' show' : ''}`}
+                        >
+                          Eligible ✓
+                        </div>
+                      </div>
+                      <div className={`tier-card gold`}>
+                        <div className="tier-card-label">Gold</div>
+                        <h4>Elite</h4>
+                        <div className="tier-req">
+                          <span className="dot">•</span> 5+ years experience
+                        </div>
+                        <div className="tier-req">
+                          <span className="dot">•</span> 3+ languages
+                        </div>
+                        <div className="tier-req">
+                          <span className="dot">•</span> Passport holder
+                        </div>
+                        <div
+                          className={`tier-eligible-badge${tiers.gold ? ' show' : ''}`}
+                        >
+                          Eligible ✓
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="btn-row">
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(3)}
+                    >
+                      ← Back
+                    </button>
+                    <button className="btn-primary" onClick={() => goStep(5)}>
+                      Next: References →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 6: References ── */}
+              {step === 5 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 6 of 8</div>
+                    <h2 tabIndex={-1}>Professional References</h2>
+                    <p>
+                      Provide two references who can speak to your childcare experience
+                      and character. They must be reachable by phone or email.
+                    </p>
+                  </div>
+
+                  <div className="reference-block">
+                    <h4>Reference 1</h4>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>
+                          Full Name <span className="req">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={ref1Name}
+                          onChange={(e) => setRef1Name(e.target.value)}
+                          placeholder="e.g. Mary Kamau"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>
+                          Relationship to You <span className="req">*</span>
+                        </label>
+                        <select
+                          value={ref1Rel}
+                          onChange={(e) => setRef1Rel(e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option>Former Employer</option>
+                          <option>Supervisor</option>
+                          <option>Colleague</option>
+                          <option>Family Friend</option>
+                          <option>Teacher / Trainer</option>
+                          <option>Other Professional</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Employer / Organisation</label>
+                        <input
+                          type="text"
+                          value={ref1Employer}
+                          onChange={(e) => setRef1Employer(e.target.value)}
+                          placeholder="Where they work"
+                        />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>
+                          Phone Number <span className="req">*</span>
+                        </label>
+                        <PhoneInput
+                          value={ref1Phone}
+                          onChange={setRef1Phone}
+                          countryCode={ref1Contact}
+                          onCodeChange={setRef1Contact}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>
+                          Email Address <span className="optional-tag">Optional</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={ref1Email}
+                          onChange={(e) => setRef1Email(e.target.value)}
+                          placeholder="ref@email.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="reference-block">
+                    <h4>Reference 2</h4>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>
+                          Full Name <span className="req">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={ref2Name}
+                          onChange={(e) => setRef2Name(e.target.value)}
+                          placeholder="e.g. James Odhiambo"
+                        />
+                      </div>
+                      <div className="field">
+                        <label>
+                          Relationship to You <span className="req">*</span>
+                        </label>
+                        <select
+                          value={ref2Rel}
+                          onChange={(e) => setRef2Rel(e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          <option>Former Employer</option>
+                          <option>Supervisor</option>
+                          <option>Colleague</option>
+                          <option>Family Friend</option>
+                          <option>Teacher / Trainer</option>
+                          <option>Other Professional</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Employer / Organisation</label>
+                        <input
+                          type="text"
+                          value={ref2Employer}
+                          onChange={(e) => setRef2Employer(e.target.value)}
+                          placeholder="Where they work"
+                        />
+                      </div>
+                    </div>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>
+                          Phone Number <span className="req">*</span>
+                        </label>
+                        <PhoneInput
+                          value={ref2Phone}
+                          onChange={setRef2Phone}
+                          countryCode={ref2Contact}
+                          onCodeChange={setRef2Contact}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>
+                          Email Address <span className="optional-tag">Optional</span>
+                        </label>
+                        <input
+                          type="email"
+                          value={ref2Email}
+                          onChange={(e) => setRef2Email(e.target.value)}
+                          placeholder="ref@email.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="btn-row">
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(4)}
+                    >
+                      ← Back
+                    </button>
+                    <button className="btn-primary" onClick={() => goStep(6)}>
+                      Next: Availability →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 7: Availability ── */}
+              {step === 6 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 7 of 8</div>
+                    <h2 tabIndex={-1}>Availability & Preferences</h2>
+                    <p>
+                      Tell us when you&apos;re available and what kinds of placements you
+                      prefer.
+                    </p>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Available Days <span className="req">*</span>
+                    </h3>
+                    <div className="check-grid">
+                      {[
+                        'Monday',
+                        'Tuesday',
+                        'Wednesday',
+                        'Thursday',
+                        'Friday',
+                        'Saturday',
+                        'Sunday',
+                      ].map((day) => (
+                        <CheckItem
+                          key={day}
+                          label={day}
+                          checked={availDays.includes(day)}
+                          onChange={() => toggleArr(availDays, day, setAvailDays)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Working Hours</h3>
+                    <div className="field-row">
+                      <div className="field">
+                        <label>Earliest Start Time</label>
+                        <input
+                          type="time"
+                          value={earliestStart}
+                          onChange={(e) => setEarliestStart(e.target.value)}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Latest End Time</label>
+                        <input
+                          type="time"
+                          value={latestEnd}
+                          onChange={(e) => setLatestEnd(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>
+                      Travel Willingness <span className="req">*</span>
+                    </h3>
+                    <div className="radio-cards">
+                      <RadioCard
+                        label="Local only — within my county"
+                        selected={willingTravel === 'local'}
+                        onClick={() => setWillingTravel('local')}
+                      />
+                      <RadioCard
+                        label="Countrywide — anywhere in Kenya"
+                        selected={willingTravel === 'kenya'}
+                        onClick={() => setWillingTravel('kenya')}
+                      />
+                      <RadioCard
+                        label="International — willing to travel abroad with families"
+                        selected={willingTravel === 'international'}
+                        onClick={() => setWillingTravel('international')}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Preferred Locations</h3>
+                    <p
+                      style={{
+                        fontSize: '0.83rem',
+                        color: 'rgba(23,50,77,0.45)',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      Select destinations you&apos;d love to work in.
+                    </p>
+                    <div className="check-grid">
+                      {locationChoices.map((loc) => (
+                        <CheckItem
+                          key={loc}
+                          label={loc}
+                          checked={prefLocations.includes(loc)}
+                          onChange={() => toggleArr(prefLocations, loc, setPrefLocations)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-card">
+                    <h3>Additional Comfort Levels</h3>
+                    <div style={{ marginBottom: '16px' }}>
+                      <p
+                        style={{
+                          fontSize: '0.85rem',
+                          color: 'rgba(23,50,77,0.6)',
+                          marginBottom: '10px',
+                        }}
+                      >
+                        Are you comfortable working in homes with pets?
+                      </p>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {[
+                          'Yes, any pets',
+                          'Yes, dogs/cats only',
+                          'No pets',
+                          'Depends on the pet',
+                        ].map((opt) => (
+                          <div
+                            key={opt}
+                            className={`check-item${comfortPets === opt ? ' checked' : ''}`}
+                            style={{ flexBasis: 'calc(50% - 5px)', maxWidth: '260px' }}
+                            onClick={() => setComfortPets(opt)}
+                          >
+                            <div
+                              className={`check-box${comfortPets === opt ? ' checked' : ''}`}
+                            >
+                              {comfortPets === opt ? '✓' : ''}
+                            </div>
+                            <span className="check-label">{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p
+                        style={{
+                          fontSize: '0.85rem',
+                          color: 'rgba(23,50,77,0.6)',
+                          marginBottom: '10px',
+                        }}
+                      >
+                        Comfortable caring for multiple children simultaneously?
+                      </p>
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        {[
+                          'Yes — up to 2',
+                          'Yes — up to 4',
+                          'Yes — any number',
+                          'Prefer 1 child',
+                        ].map((opt) => (
+                          <div
+                            key={opt}
+                            className={`check-item${comfortMultiple === opt ? ' checked' : ''}`}
+                            style={{ flexBasis: 'calc(50% - 5px)', maxWidth: '260px' }}
+                            onClick={() => setComfortMultiple(opt)}
+                          >
+                            <div
+                              className={`check-box${comfortMultiple === opt ? ' checked' : ''}`}
+                            >
+                              {comfortMultiple === opt ? '✓' : ''}
+                            </div>
+                            <span className="check-label">{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="btn-row">
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(5)}
+                    >
+                      ← Back
+                    </button>
+                    <button className="btn-primary" onClick={() => goStep(7)}>
+                      Review My Application →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 8: Review & Submit ── */}
+              {step === 7 && (
+                <div className="form-step active">
+                  <div className="step-header">
+                    <div className="step-num">Step 8 of 8</div>
+                    <h2 tabIndex={-1}>Review & Submit</h2>
+                    <p>
+                      Please review your details carefully before submitting. You can go
+                      back to any step to make changes.
+                    </p>
+                  </div>
+
+                  <div className="review-section">
+                    <h4>Personal Information</h4>
+                    <div className="review-row">
+                      <span className="review-key">Full Name</span>
+                      <span className="review-val">
+                        {firstName} {lastName}
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Date of Birth</span>
+                      <span className="review-val">{dob}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Gender</span>
+                      <span className="review-val">{gender}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Phone</span>
+                      <span className="review-val">
+                        {countryCode} {phone}
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Email</span>
+                      <span className="review-val">{email}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Location</span>
+                      <span className="review-val">
+                        {town}, {county}
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Languages</span>
+                      <span className="review-val">{languages.join(', ') || '—'}</span>
+                    </div>
+                  </div>
+
+                  <div className="review-section">
+                    <h4>Identity & Background</h4>
+                    <div className="review-row">
+                      <span className="review-key">National ID</span>
+                      <span className="review-val">{idNumber || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">KRA PIN</span>
+                      <span className="review-val">{kraPin || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Police Clearance</span>
+                      <span className="review-val">
+                        {cogcStatus === 'yes'
+                          ? 'Valid CoGC'
+                          : cogcStatus === 'renewing'
+                            ? 'Renewing'
+                            : 'Not yet obtained'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="review-section">
+                    <h4>Experience & Skills</h4>
+                    <div className="review-row">
+                      <span className="review-key">Years Experience</span>
+                      <span className="review-val">
+                        {expYears ? `${expYears} year(s)` : '—'}
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Age Groups</span>
+                      <span className="review-val">{ageGroups.join(', ') || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Services</span>
+                      <span className="review-val">{services.join(', ') || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Swimming</span>
+                      <span className="review-val">{swimming || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Certifications</span>
+                      <span className="review-val">
+                        {certifications.filter(Boolean).join(', ') || 'None listed'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="review-section">
+                    <h4>References</h4>
+                    <div className="review-row">
+                      <span className="review-key">Reference 1</span>
+                      <span className="review-val">
+                        {ref1Name} ({ref1Rel})
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Ref 1 Phone</span>
+                      <span className="review-val">
+                        {ref1Contact} {ref1Phone}
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Reference 2</span>
+                      <span className="review-val">
+                        {ref2Name} ({ref2Rel})
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Ref 2 Phone</span>
+                      <span className="review-val">
+                        {ref2Contact} {ref2Phone}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="review-section">
+                    <h4>Availability</h4>
+                    <div className="review-row">
+                      <span className="review-key">Available Days</span>
+                      <span className="review-val">{availDays.join(', ') || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Working Hours</span>
+                      <span className="review-val">
+                        {earliestStart || '—'} – {latestEnd || '—'}
+                      </span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Travel Willingness</span>
+                      <span className="review-val">{willingTravel || '—'}</span>
+                    </div>
+                    <div className="review-row">
+                      <span className="review-key">Preferred Locations</span>
+                      <span className="review-val">
+                        {prefLocations.join(', ') || 'Any'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* CONSENTS */}
+                  <div className="form-card" style={{ marginTop: '24px' }}>
+                    <h3>Declarations & Consent</h3>
+                    <div
+                      className={`consent-item${consent1 ? ' checked' : ''}`}
+                      onClick={() => setConsent1((c) => !c)}
+                    >
+                      <div className={`consent-box${consent1 ? ' checked' : ''}`}>
+                        {consent1 ? '✓' : ''}
+                      </div>
+                      <span className="consent-text">
+                        I consent to VacayNanny conducting background checks, including
+                        verification of my police clearance certificate and contacting my
+                        references. <span className="req">*</span>
+                      </span>
+                    </div>
+                    <div
+                      className={`consent-item${consent2 ? ' checked' : ''}`}
+                      onClick={() => setConsent2((c) => !c)}
+                    >
+                      <div className={`consent-box${consent2 ? ' checked' : ''}`}>
+                        {consent2 ? '✓' : ''}
+                      </div>
+                      <span className="consent-text">
+                        I agree to VacayNanny&apos;s{' '}
+                        <a href="/terms" style={{ color: 'var(--coral)' }}>
+                          Terms of Service
+                        </a>{' '}
+                        and{' '}
+                        <a href="/privacy" style={{ color: 'var(--coral)' }}>
+                          Privacy Policy
+                        </a>
+                        , including the use of my data for matching me with families.{' '}
+                        <span className="req">*</span>
+                      </span>
+                    </div>
+                    <div
+                      className={`consent-item${consent3 ? ' checked' : ''}`}
+                      onClick={() => setConsent3((c) => !c)}
+                    >
+                      <div className={`consent-box${consent3 ? ' checked' : ''}`}>
+                        {consent3 ? '✓' : ''}
+                      </div>
+                      <span className="consent-text">
+                        I confirm that all information provided in this application is
+                        accurate and truthful to the best of my knowledge. I understand
+                        that providing false information may result in immediate
+                        disqualification. <span className="req">*</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="btn-row">
+                    {uploadProgress && (
+                      <p role="status" aria-live="polite">
+                        {uploadProgress}
+                      </p>
+                    )}
+                    <button
+                      className="btn-ghost"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(23,50,77,0.2)',
+                        color: 'var(--deep)',
+                        borderRadius: '50px',
+                        padding: '12px 24px',
+                        cursor: 'pointer',
+                        fontFamily: 'DM Sans, sans-serif',
+                      }}
+                      onClick={() => goStep(6)}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      className="btn-submit"
+                      onClick={submitForm}
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Submitting…' : 'Submit Application →'}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(2)}>← Back</button>
-              <button className="btn-primary" onClick={() => goStep(4)}>Next: Skills →</button>
-            </div>
           </div>
-        )}
-
-        {/* ── STEP 5: Skills ── */}
-        {step === 4 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 5 of 8</div>
-              <h2>Skills & Abilities</h2>
-              <p>Help families know exactly what you bring to their holiday.</p>
-            </div>
-
-            <div className="form-card">
-              <h3>Swimming</h3>
-              <div className="radio-cards">
-                <RadioCard label="I cannot swim" selected={swimming === 'none'} onClick={() => setSwimming('none')} />
-                <RadioCard label="I can swim (basic)" selected={swimming === 'basic'} onClick={() => setSwimming('basic')} />
-                <RadioCard label="Strong swimmer — comfortable supervising children in pools/ocean" selected={swimming === 'strong'} onClick={() => setSwimming('strong')} />
-                <RadioCard label="Certified lifeguard" selected={swimming === 'lifeguard'} onClick={() => setSwimming('lifeguard')} />
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Cooking for Children</h3>
-              <div className="radio-cards">
-                <RadioCard label="Basic meal prep (simple dishes, reheating)" selected={cooking === 'basic'} onClick={() => setCooking('basic')} />
-                <RadioCard label="Good cook — can prepare balanced children's meals" selected={cooking === 'good'} onClick={() => setCooking('good')} />
-                <RadioCard label="Experienced — including dietary restrictions &amp; allergies" selected={cooking === 'experienced'} onClick={() => setCooking('experienced')} />
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Tutoring / Educational Support</h3>
-              <div className="radio-cards">
-                <RadioCard label="Not applicable" selected={tutoring === 'none'} onClick={() => setTutoring('none')} />
-                <RadioCard label="Basic homework help (primary school)" selected={tutoring === 'basic'} onClick={() => setTutoring('basic')} />
-                <RadioCard label="Secondary school tutoring" selected={tutoring === 'secondary'} onClick={() => setTutoring('secondary')} />
-                <RadioCard label="Montessori / early childhood education trained" selected={tutoring === 'montessori'} onClick={() => setTutoring('montessori')} />
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Driving</h3>
-              <div className="radio-cards">
-                <RadioCard label="I don't drive" selected={driving === 'none'} onClick={() => setDriving('none')} />
-                <RadioCard label="I hold a valid Kenyan driver's licence" selected={driving === 'kenya'} onClick={() => setDriving('kenya')} />
-                <RadioCard label="I hold an international driver's licence" selected={driving === 'international'} onClick={() => setDriving('international')} />
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Special Needs Experience</h3>
-              <div className="radio-cards">
-                <RadioCard label="No specific experience" selected={specialNeeds === 'none'} onClick={() => setSpecialNeeds('none')} />
-                <RadioCard label="Some exposure (autism-friendly approaches)" selected={specialNeeds === 'some'} onClick={() => setSpecialNeeds('some')} />
-                <RadioCard label="Trained — worked with children with disabilities" selected={specialNeeds === 'trained'} onClick={() => setSpecialNeeds('trained')} />
-                <RadioCard label="Certified special needs educator / therapist" selected={specialNeeds === 'certified'} onClick={() => setSpecialNeeds('certified')} />
-              </div>
-            </div>
-
-            {/* Tier eligibility preview */}
-            <div className="form-card">
-              <h3>Your Likely Tier Based on Application</h3>
-              <div className="tier-cards">
-                <div className={`tier-card bronze${tiers.bronze ? '' : ''}`}>
-                  <div className="tier-card-label">Bronze</div>
-                  <h4>Entry Level</h4>
-                  <div className="tier-req"><span className="dot">•</span> Any experience level</div>
-                  <div className="tier-req"><span className="dot">•</span> Valid national ID</div>
-                  <div className="tier-req"><span className="dot">•</span> CoGC (can apply later)</div>
-                  <div className={`tier-eligible-badge${tiers.bronze ? ' show' : ''}`}>Eligible ✓</div>
-                </div>
-                <div className={`tier-card silver`}>
-                  <div className="tier-card-label">Silver</div>
-                  <h4>Professional</h4>
-                  <div className="tier-req"><span className="dot">•</span> 2+ years experience</div>
-                  <div className="tier-req"><span className="dot">•</span> Valid CoGC</div>
-                  <div className="tier-req"><span className="dot">•</span> First-aid certified</div>
-                  <div className={`tier-eligible-badge${tiers.silver ? ' show' : ''}`}>Eligible ✓</div>
-                </div>
-                <div className={`tier-card gold`}>
-                  <div className="tier-card-label">Gold</div>
-                  <h4>Elite</h4>
-                  <div className="tier-req"><span className="dot">•</span> 5+ years experience</div>
-                  <div className="tier-req"><span className="dot">•</span> 3+ languages</div>
-                  <div className="tier-req"><span className="dot">•</span> Passport holder</div>
-                  <div className={`tier-eligible-badge${tiers.gold ? ' show' : ''}`}>Eligible ✓</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(3)}>← Back</button>
-              <button className="btn-primary" onClick={() => goStep(5)}>Next: References →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 6: References ── */}
-        {step === 5 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 6 of 8</div>
-              <h2>Professional References</h2>
-              <p>Provide two references who can speak to your childcare experience and character. They must be reachable by phone or email.</p>
-            </div>
-
-            <div className="reference-block">
-              <h4>Reference 1</h4>
-              <div className="field-row">
-                <div className="field">
-                  <label>Full Name <span className="req">*</span></label>
-                  <input type="text" value={ref1Name} onChange={e => setRef1Name(e.target.value)} placeholder="e.g. Mary Kamau" />
-                </div>
-                <div className="field">
-                  <label>Relationship to You <span className="req">*</span></label>
-                  <select value={ref1Rel} onChange={e => setRef1Rel(e.target.value)}>
-                    <option value="">Select</option>
-                    <option>Former Employer</option>
-                    <option>Supervisor</option>
-                    <option>Colleague</option>
-                    <option>Family Friend</option>
-                    <option>Teacher / Trainer</option>
-                    <option>Other Professional</option>
-                  </select>
-                </div>
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Employer / Organisation</label>
-                  <input type="text" value={ref1Employer} onChange={e => setRef1Employer(e.target.value)} placeholder="Where they work" />
-                </div>
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Phone Number <span className="req">*</span></label>
-                  <PhoneInput value={ref1Phone} onChange={setRef1Phone} countryCode={ref1Contact} onCodeChange={setRef1Contact} />
-                </div>
-                <div className="field">
-                  <label>Email Address <span className="optional-tag">Optional</span></label>
-                  <input type="email" value={ref1Email} onChange={e => setRef1Email(e.target.value)} placeholder="ref@email.com" />
-                </div>
-              </div>
-            </div>
-
-            <div className="reference-block">
-              <h4>Reference 2</h4>
-              <div className="field-row">
-                <div className="field">
-                  <label>Full Name <span className="req">*</span></label>
-                  <input type="text" value={ref2Name} onChange={e => setRef2Name(e.target.value)} placeholder="e.g. James Odhiambo" />
-                </div>
-                <div className="field">
-                  <label>Relationship to You <span className="req">*</span></label>
-                  <select value={ref2Rel} onChange={e => setRef2Rel(e.target.value)}>
-                    <option value="">Select</option>
-                    <option>Former Employer</option>
-                    <option>Supervisor</option>
-                    <option>Colleague</option>
-                    <option>Family Friend</option>
-                    <option>Teacher / Trainer</option>
-                    <option>Other Professional</option>
-                  </select>
-                </div>
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Employer / Organisation</label>
-                  <input type="text" value={ref2Employer} onChange={e => setRef2Employer(e.target.value)} placeholder="Where they work" />
-                </div>
-              </div>
-              <div className="field-row">
-                <div className="field">
-                  <label>Phone Number <span className="req">*</span></label>
-                  <PhoneInput value={ref2Phone} onChange={setRef2Phone} countryCode={ref2Contact} onCodeChange={setRef2Contact} />
-                </div>
-                <div className="field">
-                  <label>Email Address <span className="optional-tag">Optional</span></label>
-                  <input type="email" value={ref2Email} onChange={e => setRef2Email(e.target.value)} placeholder="ref@email.com" />
-                </div>
-              </div>
-            </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(4)}>← Back</button>
-              <button className="btn-primary" onClick={() => goStep(6)}>Next: Availability →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 7: Availability ── */}
-        {step === 6 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 7 of 8</div>
-              <h2>Availability & Preferences</h2>
-              <p>Tell us when you&apos;re available and what kinds of placements you prefer.</p>
-            </div>
-
-            <div className="form-card">
-              <h3>Available Days <span className="req">*</span></h3>
-              <div className="check-grid">
-                {['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(day => (
-                  <CheckItem
-                    key={day} label={day}
-                    checked={availDays.includes(day)}
-                    onChange={() => toggleArr(availDays, day, setAvailDays)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Working Hours</h3>
-              <div className="field-row">
-                <div className="field">
-                  <label>Earliest Start Time</label>
-                  <input type="time" value={earliestStart} onChange={e => setEarliestStart(e.target.value)} />
-                </div>
-                <div className="field">
-                  <label>Latest End Time</label>
-                  <input type="time" value={latestEnd} onChange={e => setLatestEnd(e.target.value)} />
-                </div>
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Travel Willingness <span className="req">*</span></h3>
-              <div className="radio-cards">
-                <RadioCard label="Local only — within my county" selected={willingTravel === 'local'} onClick={() => setWillingTravel('local')} />
-                <RadioCard label="Countrywide — anywhere in Kenya" selected={willingTravel === 'kenya'} onClick={() => setWillingTravel('kenya')} />
-                <RadioCard label="International — willing to travel abroad with families" selected={willingTravel === 'international'} onClick={() => setWillingTravel('international')} />
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Preferred Locations</h3>
-              <p style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.45)', marginBottom: '12px' }}>Select destinations you&apos;d love to work in.</p>
-              <div className="check-grid">
-                {locationChoices.map(loc => (
-                  <CheckItem
-                    key={loc} label={loc}
-                    checked={prefLocations.includes(loc)}
-                    onChange={() => toggleArr(prefLocations, loc, setPrefLocations)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="form-card">
-              <h3>Additional Comfort Levels</h3>
-              <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>Are you comfortable working in homes with pets?</p>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {['Yes, any pets','Yes, dogs/cats only','No pets','Depends on the pet'].map(opt => (
-                    <div
-                      key={opt}
-                      className={`check-item${comfortPets === opt ? ' checked' : ''}`}
-                      style={{ flexBasis: 'calc(50% - 5px)', maxWidth: '260px' }}
-                      onClick={() => setComfortPets(opt)}
-                    >
-                      <div className={`check-box${comfortPets === opt ? ' checked' : ''}`}>{comfortPets === opt ? '✓' : ''}</div>
-                      <span className="check-label">{opt}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)', marginBottom: '10px' }}>Comfortable caring for multiple children simultaneously?</p>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {['Yes — up to 2','Yes — up to 4','Yes — any number','Prefer 1 child'].map(opt => (
-                    <div
-                      key={opt}
-                      className={`check-item${comfortMultiple === opt ? ' checked' : ''}`}
-                      style={{ flexBasis: 'calc(50% - 5px)', maxWidth: '260px' }}
-                      onClick={() => setComfortMultiple(opt)}
-                    >
-                      <div className={`check-box${comfortMultiple === opt ? ' checked' : ''}`}>{comfortMultiple === opt ? '✓' : ''}</div>
-                      <span className="check-label">{opt}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(5)}>← Back</button>
-              <button className="btn-primary" onClick={() => goStep(7)}>Review My Application →</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── STEP 8: Review & Submit ── */}
-        {step === 7 && (
-          <div className="form-step active">
-            <div className="step-header">
-              <div className="step-num">Step 8 of 8</div>
-              <h2>Review & Submit</h2>
-              <p>Please review your details carefully before submitting. You can go back to any step to make changes.</p>
-            </div>
-
-            <div className="review-section">
-              <h4>Personal Information</h4>
-              <div className="review-row"><span className="review-key">Full Name</span><span className="review-val">{firstName} {lastName}</span></div>
-              <div className="review-row"><span className="review-key">Date of Birth</span><span className="review-val">{dob}</span></div>
-              <div className="review-row"><span className="review-key">Gender</span><span className="review-val">{gender}</span></div>
-              <div className="review-row"><span className="review-key">Phone</span><span className="review-val">{countryCode} {phone}</span></div>
-              <div className="review-row"><span className="review-key">Email</span><span className="review-val">{email}</span></div>
-              <div className="review-row"><span className="review-key">Location</span><span className="review-val">{town}, {county}</span></div>
-              <div className="review-row"><span className="review-key">Languages</span><span className="review-val">{languages.join(', ') || '—'}</span></div>
-            </div>
-
-            <div className="review-section">
-              <h4>Identity & Background</h4>
-              <div className="review-row"><span className="review-key">National ID</span><span className="review-val">{idNumber || '—'}</span></div>
-              <div className="review-row"><span className="review-key">KRA PIN</span><span className="review-val">{kraPin || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Police Clearance</span><span className="review-val">{cogcStatus === 'yes' ? 'Valid CoGC' : cogcStatus === 'renewing' ? 'Renewing' : 'Not yet obtained'}</span></div>
-            </div>
-
-            <div className="review-section">
-              <h4>Experience & Skills</h4>
-              <div className="review-row"><span className="review-key">Years Experience</span><span className="review-val">{expYears ? `${expYears} year(s)` : '—'}</span></div>
-              <div className="review-row"><span className="review-key">Age Groups</span><span className="review-val">{ageGroups.join(', ') || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Services</span><span className="review-val">{services.join(', ') || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Swimming</span><span className="review-val">{swimming || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Certifications</span><span className="review-val">{certifications.filter(Boolean).join(', ') || 'None listed'}</span></div>
-            </div>
-
-            <div className="review-section">
-              <h4>References</h4>
-              <div className="review-row"><span className="review-key">Reference 1</span><span className="review-val">{ref1Name} ({ref1Rel})</span></div>
-              <div className="review-row"><span className="review-key">Ref 1 Phone</span><span className="review-val">{ref1Contact} {ref1Phone}</span></div>
-              <div className="review-row"><span className="review-key">Reference 2</span><span className="review-val">{ref2Name} ({ref2Rel})</span></div>
-              <div className="review-row"><span className="review-key">Ref 2 Phone</span><span className="review-val">{ref2Contact} {ref2Phone}</span></div>
-            </div>
-
-            <div className="review-section">
-              <h4>Availability</h4>
-              <div className="review-row"><span className="review-key">Available Days</span><span className="review-val">{availDays.join(', ') || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Working Hours</span><span className="review-val">{earliestStart || '—'} – {latestEnd || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Travel Willingness</span><span className="review-val">{willingTravel || '—'}</span></div>
-              <div className="review-row"><span className="review-key">Preferred Locations</span><span className="review-val">{prefLocations.join(', ') || 'Any'}</span></div>
-            </div>
-
-            {/* CONSENTS */}
-            <div className="form-card" style={{ marginTop: '24px' }}>
-              <h3>Declarations & Consent</h3>
-              <div
-                className={`consent-item${consent1 ? ' checked' : ''}`}
-                onClick={() => setConsent1(c => !c)}
-              >
-                <div className={`consent-box${consent1 ? ' checked' : ''}`}>{consent1 ? '✓' : ''}</div>
-                <span className="consent-text">I consent to VacayNanny conducting background checks, including verification of my police clearance certificate and contacting my references. <span className="req">*</span></span>
-              </div>
-              <div
-                className={`consent-item${consent2 ? ' checked' : ''}`}
-                onClick={() => setConsent2(c => !c)}
-              >
-                <div className={`consent-box${consent2 ? ' checked' : ''}`}>{consent2 ? '✓' : ''}</div>
-                <span className="consent-text">I agree to VacayNanny&apos;s <a href="/terms" style={{ color: 'var(--coral)' }}>Terms of Service</a> and <a href="/privacy" style={{ color: 'var(--coral)' }}>Privacy Policy</a>, including the use of my data for matching me with families. <span className="req">*</span></span>
-              </div>
-              <div
-                className={`consent-item${consent3 ? ' checked' : ''}`}
-                onClick={() => setConsent3(c => !c)}
-              >
-                <div className={`consent-box${consent3 ? ' checked' : ''}`}>{consent3 ? '✓' : ''}</div>
-                <span className="consent-text">I confirm that all information provided in this application is accurate and truthful to the best of my knowledge. I understand that providing false information may result in immediate disqualification. <span className="req">*</span></span>
-              </div>
-            </div>
-
-            <div className="btn-row">
-              <button className="btn-ghost" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '50px', padding: '12px 24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }} onClick={() => goStep(6)}>← Back</button>
-              <button
-                className="btn-submit"
-                onClick={submitForm}
-                disabled={submitting}
-              >
-                {submitting ? 'Submitting…' : 'Submit Application →'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      </main>
     </>
   )
 }

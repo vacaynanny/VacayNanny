@@ -14,9 +14,20 @@ import {
   travelLabel,
 } from '@/lib/application-docs'
 import { waLinkTo } from '@/lib/constants'
-import type { ApplicationStatus, NannyApplication, NannyDocument, NannyReference } from '@/lib/types'
+import type {
+  ApplicationStatus,
+  NannyApplication,
+  NannyDocument,
+  NannyReference,
+} from '@/lib/types'
 
-const APP_STATUSES: ApplicationStatus[] = ['pending', 'reviewing', 'interview', 'approved', 'rejected']
+const APP_STATUSES: ApplicationStatus[] = [
+  'pending',
+  'reviewing',
+  'interview',
+  'approved',
+  'rejected',
+]
 
 function fileHref(applicationId: string, docId: string, download = false) {
   return `/api/admin/applications/${applicationId}/files/${docId}${download ? '?download=1' : ''}`
@@ -41,11 +52,38 @@ export default function AdminApplicationReview({
   documents: NannyDocument[]
 }) {
   const router = useRouter()
+  const [checks, setChecks] = useState<Record<string, boolean>>(
+    application.vetting_checks || {},
+  )
+  const [reviewedTier, setReviewedTier] = useState(application.estimated_tier)
   const [notes, setNotes] = useState(application.admin_notes || '')
-  const [interviewAt, setInterviewAt] = useState(toNairobiDatetimeLocal(application.interview_at))
+  const [interviewAt, setInterviewAt] = useState(
+    toNairobiDatetimeLocal(application.interview_at),
+  )
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [preview, setPreview] = useState<NannyDocument | null>(null)
+  async function saveAgreement(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusy('agreement')
+    setError('')
+    try {
+      const res = await fetch(`/api/admin/applications/${application.id}/agreement`, {
+        method: 'POST',
+        body: new FormData(event.currentTarget),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.error || 'Could not record agreement.')
+        return
+      }
+      router.refresh()
+    } catch {
+      setError('Could not reach the server. Please try again.')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   async function patch(body: Record<string, unknown>, busyKey: string) {
     setBusy(busyKey)
@@ -54,7 +92,11 @@ export default function AdminApplicationReview({
       const res = await fetch(`/api/admin/applications/${application.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          ...body,
+          vettingChecks: checks,
+          estimatedTier: reviewedTier,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -62,6 +104,8 @@ export default function AdminApplicationReview({
         return
       }
       router.refresh()
+    } catch {
+      setError('Could not reach the server. Please try again.')
     } finally {
       setBusy(null)
     }
@@ -70,33 +114,65 @@ export default function AdminApplicationReview({
   return (
     <div className="profile-layout">
       <div>
-        {error && <p className="field-error-msg" style={{ marginBottom: 16 }}>{error}</p>}
+        {error && (
+          <p className="field-error-msg" style={{ marginBottom: 16 }}>
+            {error}
+          </p>
+        )}
 
         <div className="form-card">
           <h3>Identity & documents</h3>
           {documents.length === 0 && (
-            <p style={{ color: 'rgba(255,255,255,0.5)' }}>No files were uploaded with this application.</p>
+            <p style={{ color: 'rgba(23,50,77,0.5)' }}>
+              No files were uploaded with this application.
+            </p>
           )}
           <div className="vetting-docs">
-            {documents.map(doc => {
+            {documents.map((doc) => {
               const href = fileHref(application.id, doc.id)
               const image = isPreviewableImage(doc)
               return (
                 <article className="vetting-doc" key={doc.id}>
                   {image ? (
-                    <button type="button" className="vetting-doc-preview" onClick={() => setPreview(doc)}>
-                      <MediaImage src={href} alt={documentKindLabel(doc.kind)} fill sizes="280px" />
+                    <button
+                      type="button"
+                      className="vetting-doc-preview"
+                      onClick={() => setPreview(doc)}
+                    >
+                      <MediaImage
+                        src={href}
+                        alt={documentKindLabel(doc.kind)}
+                        fill
+                        sizes="280px"
+                      />
                     </button>
                   ) : (
-                    <a className="vetting-doc-preview vetting-doc-file" href={href} target="_blank" rel="noopener noreferrer">
+                    <a
+                      className="vetting-doc-preview vetting-doc-file"
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       {isPdf(doc) ? 'PDF' : 'File'}
                     </a>
                   )}
                   <p className="vetting-doc-kind">{documentKindLabel(doc.kind)}</p>
                   <p className="vetting-doc-name">{doc.file_name || doc.kind}</p>
                   <div className="booking-actions" style={{ marginTop: 8 }}>
-                    <a className="btn-ghost" href={href} target="_blank" rel="noopener noreferrer">Open</a>
-                    <a className="btn-ghost" href={fileHref(application.id, doc.id, true)}>Download</a>
+                    <a
+                      className="btn-ghost"
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Open
+                    </a>
+                    <a
+                      className="btn-ghost"
+                      href={fileHref(application.id, doc.id, true)}
+                    >
+                      Download
+                    </a>
                   </div>
                 </article>
               )
@@ -107,13 +183,16 @@ export default function AdminApplicationReview({
             <span className="review-val">{application.national_id_number || '—'}</span>
           </div>
           <Row label="KRA PIN" value={application.kra_pin} />
-          <Row label="Police clearance" value={`${cogcLabel(application.cogc_status)}${application.cogc_date ? ` · ${application.cogc_date}` : ''}`} />
+          <Row
+            label="Police clearance"
+            value={`${cogcLabel(application.cogc_status)}${application.cogc_date ? ` · ${application.cogc_date}` : ''}`}
+          />
         </div>
 
         <div className="form-card">
           <h3>References</h3>
           {references.length === 0 && (
-            <p style={{ color: 'rgba(255,255,255,0.5)' }}>No references were submitted.</p>
+            <p style={{ color: 'rgba(23,50,77,0.5)' }}>No references were submitted.</p>
           )}
           {references.map((ref, i) => {
             const wa = waLinkTo(
@@ -124,17 +203,34 @@ export default function AdminApplicationReview({
             return (
               <div key={ref.id} className={i > 0 ? 'vetting-ref' : undefined}>
                 <div className="review-row">
-                  <span className="review-key"><strong>{ref.full_name}</strong></span>
+                  <span className="review-key">
+                    <strong>{ref.full_name}</strong>
+                  </span>
                   <span className="review-val">{ref.relationship || 'Reference'}</span>
                 </div>
                 <Row label="Employer" value={ref.employer} />
-                <Row label="Phone" value={[ref.country_code, ref.phone].filter(Boolean).join(' ')} />
+                <Row
+                  label="Phone"
+                  value={[ref.country_code, ref.phone].filter(Boolean).join(' ')}
+                />
                 <Row label="Email" value={ref.email} />
                 <Row label="Permission to contact" value={ref.permission_to_contact} />
                 <div className="booking-actions">
-                  {wa && <a className="btn-coral" href={wa} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+                  {wa && (
+                    <a
+                      className="btn-coral"
+                      href={wa}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
                   {ref.email && (
-                    <a className="btn-ghost" href={`mailto:${ref.email}?subject=${encodeURIComponent(`VacayNanny reference — ${application.full_name}`)}`}>
+                    <a
+                      className="btn-ghost"
+                      href={`mailto:${ref.email}?subject=${encodeURIComponent(`VacayNanny reference — ${application.full_name}`)}`}
+                    >
                       Email
                     </a>
                   )}
@@ -150,10 +246,25 @@ export default function AdminApplicationReview({
           <Row label="Date of birth" value={application.date_of_birth} />
           <Row label="Gender" value={application.gender} />
           <Row label="Email" value={application.email} />
-          <Row label="Phone" value={[application.country_code, application.phone].filter(Boolean).join(' ')} />
-          <Row label="Location" value={[application.town, application.county].filter(Boolean).join(', ')} />
+          <Row
+            label="Phone"
+            value={[application.country_code, application.phone]
+              .filter(Boolean)
+              .join(' ')}
+          />
+          <Row
+            label="Location"
+            value={[application.town, application.county].filter(Boolean).join(', ')}
+          />
           <Row label="Languages" value={joinList(application.languages)} />
-          <Row label="Experience" value={application.experience_years ? `${application.experience_years} year(s)` : '—'} />
+          <Row
+            label="Experience"
+            value={
+              application.experience_years
+                ? `${application.experience_years} year(s)`
+                : '—'
+            }
+          />
           <Row label="Age groups" value={joinList(application.age_groups)} />
           <Row label="Services" value={joinList(application.services)} />
           <Row label="Certifications" value={joinList(application.certifications)} />
@@ -163,13 +274,29 @@ export default function AdminApplicationReview({
           <Row label="Driving" value={application.driving} />
           <Row label="Special needs" value={application.special_needs} />
           <Row label="Available days" value={joinList(application.available_days)} />
-          <Row label="Hours" value={[application.earliest_start, application.latest_end].filter(Boolean).join(' – ')} />
+          <Row
+            label="Hours"
+            value={[application.earliest_start, application.latest_end]
+              .filter(Boolean)
+              .join(' – ')}
+          />
           <Row label="Travel" value={travelLabel(application.willing_to_travel)} />
-          <Row label="Preferred locations" value={joinList(application.preferred_locations)} />
+          <Row
+            label="Preferred locations"
+            value={joinList(application.preferred_locations)}
+          />
           <Row label="Pets" value={application.comfortable_pets} />
           <Row label="Multiple children" value={application.comfortable_multiple} />
           {application.bio && (
-            <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginTop: 16 }}>{application.bio}</p>
+            <p
+              style={{
+                color: 'rgba(23,50,77,0.7)',
+                lineHeight: 1.7,
+                marginTop: 16,
+              }}
+            >
+              {application.bio}
+            </p>
           )}
         </div>
       </div>
@@ -184,11 +311,15 @@ export default function AdminApplicationReview({
           <Row label="Estimated tier" value={application.estimated_tier} />
           <Row label="Submitted" value={application.created_at.slice(0, 10)} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-            {APP_STATUSES.map(s => (
+            {APP_STATUSES.map((s) => (
               <button
                 key={s}
                 className="btn-ghost"
-                style={{ padding: '8px 14px', fontSize: '0.78rem', opacity: application.status === s ? 1 : 0.6 }}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '0.78rem',
+                  opacity: application.status === s ? 1 : 0.6,
+                }}
                 disabled={busy === s}
                 onClick={() => patch({ status: s }, s)}
               >
@@ -198,6 +329,108 @@ export default function AdminApplicationReview({
           </div>
         </div>
 
+        <div className="form-card">
+          <h3>Verification checklist</h3>
+          <p>
+            Record completed checks before approval. Uploads and self-declared experience
+            do not count as verification.
+          </p>
+          {Object.entries({
+            identity: 'ID and identity selfie verified',
+            policeClearance: 'Police clearance checked',
+            references: 'Both references contacted and checked',
+            interview: 'Interview completed',
+            qualifications: 'Qualifications and tier eligibility verified',
+          }).map(([key, label]) => (
+            <label className="force-assign" key={key}>
+              <input
+                type="checkbox"
+                checked={checks[key] === true}
+                onChange={(e) =>
+                  setChecks((value) => ({ ...value, [key]: e.target.checked }))
+                }
+              />
+              {label}
+            </label>
+          ))}
+          <label className="field">
+            Approved tier
+            <select
+              value={reviewedTier}
+              onChange={(e) => setReviewedTier(e.target.value as typeof reviewedTier)}
+            >
+              <option value="bronze">Bronze</option>
+              <option value="silver">Silver</option>
+              <option value="gold">Gold</option>
+            </select>
+          </label>
+          <button
+            className="btn-ghost"
+            disabled={Boolean(busy)}
+            onClick={() => patch({ adminNotes: notes }, 'checks')}
+          >
+            Save verification checks
+          </button>
+        </div>
+        <div className="form-card">
+          <h3>Signed agreement & activation</h3>
+          <p className="ops-note">
+            Approval emails include the agreement. A profile stays unpublished until the
+            signed copy has been received and reviewed.
+          </p>
+          {application.agreement_reviewed_at ? (
+            <>
+              <p className="account-saved">
+                Signed agreement reviewed on{' '}
+                {formatNairobiInterview(application.agreement_reviewed_at)} EAT.
+              </p>
+              <a
+                className="btn-ghost"
+                href={`/api/admin/applications/${application.id}/agreement`}
+              >
+                Download signed agreement
+              </a>
+              <button
+                type="button"
+                className="btn-coral"
+                disabled={Boolean(busy) || application.status !== 'approved'}
+                onClick={() => patch({ publish: true }, 'publish')}
+              >
+                {busy === 'publish' ? 'Activating…' : 'Activate nanny profile'}
+              </button>
+            </>
+          ) : (
+            <form onSubmit={saveAgreement} className="agreement-form">
+              <label>
+                Signed agreement (PDF, up to 8 MB)
+                <input
+                  type="file"
+                  name="agreement"
+                  accept="application/pdf"
+                  required
+                  disabled={application.status !== 'approved'}
+                />
+              </label>
+              <label className="force-assign">
+                <input
+                  type="checkbox"
+                  name="reviewed"
+                  value="true"
+                  required
+                  disabled={application.status !== 'approved'}
+                />
+                I have reviewed the signed agreement and confirmed the details.
+              </label>
+              <button
+                className="btn-coral"
+                type="submit"
+                disabled={Boolean(busy) || application.status !== 'approved'}
+              >
+                {busy === 'agreement' ? 'Saving…' : 'Record agreement review'}
+              </button>
+            </form>
+          )}
+        </div>
         <div className="form-card">
           <h3>Interview</h3>
           {application.interview_at && (
@@ -211,14 +444,19 @@ export default function AdminApplicationReview({
               id="interview-at"
               type="datetime-local"
               value={interviewAt}
-              onChange={e => setInterviewAt(e.target.value)}
+              onChange={(e) => setInterviewAt(e.target.value)}
             />
           </div>
           <div className="booking-actions">
             <button
               className="btn-coral"
               disabled={busy === 'interview' || !interviewAt}
-              onClick={() => patch({ interviewAt, notifyInterview: true, adminNotes: notes }, 'interview')}
+              onClick={() =>
+                patch(
+                  { interviewAt, notifyInterview: true, adminNotes: notes },
+                  'interview',
+                )
+              }
             >
               {busy === 'interview' ? 'Scheduling…' : 'Schedule & email'}
             </button>
@@ -235,11 +473,13 @@ export default function AdminApplicationReview({
         <div className="form-card">
           <h3>Internal notes</h3>
           <div className="field">
-            <label htmlFor="admin-notes">Visible to admin; included on reject / interview emails if filled</label>
+            <label htmlFor="admin-notes">
+              Visible to admin; included on reject / interview emails if filled
+            </label>
             <textarea
               id="admin-notes"
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
               style={{ minHeight: 140 }}
             />
           </div>
@@ -253,10 +493,15 @@ export default function AdminApplicationReview({
           </button>
         </div>
 
-        {(application.consent_background || application.consent_terms || application.consent_accuracy) && (
+        {(application.consent_background ||
+          application.consent_terms ||
+          application.consent_accuracy) && (
           <div className="form-card">
             <h3>Consents</h3>
-            <Row label="Background check" value={application.consent_background ? 'Yes' : '—'} />
+            <Row
+              label="Background check"
+              value={application.consent_background ? 'Yes' : '—'}
+            />
             <Row label="Terms" value={application.consent_terms ? 'Yes' : '—'} />
             <Row label="Accuracy" value={application.consent_accuracy ? 'Yes' : '—'} />
           </div>
@@ -264,14 +509,24 @@ export default function AdminApplicationReview({
       </aside>
 
       {preview && (
-        <div className="vetting-lightbox" onClick={() => setPreview(null)} role="presentation">
+        <div
+          className="vetting-lightbox"
+          onClick={() => setPreview(null)}
+          role="presentation"
+        >
           <MediaImage
             src={fileHref(application.id, preview.id)}
             alt={documentKindLabel(preview.kind)}
             width={1200}
             height={1600}
-            style={{ width: 'auto', height: 'auto', maxWidth: 'min(960px, 96vw)', maxHeight: '82vh', objectFit: 'contain' }}
-            onClick={e => e.stopPropagation()}
+            style={{
+              width: 'auto',
+              height: 'auto',
+              maxWidth: 'min(960px, 96vw)',
+              maxHeight: '82vh',
+              objectFit: 'contain',
+            }}
+            onClick={(e) => e.stopPropagation()}
           />
           <p>{documentKindLabel(preview.kind)}</p>
         </div>

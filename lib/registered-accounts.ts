@@ -12,12 +12,14 @@ function accountRole(profileRole: UserRole | null, signupRole: unknown): UserRol
   return 'parent'
 }
 
-export async function loadRegisteredAccounts(supabase: SupabaseClient): Promise<RegisteredAccount[]> {
+export async function loadRegisteredAccounts(
+  supabase: SupabaseClient,
+): Promise<RegisteredAccount[]> {
   const { data: profileRows } = await supabase
     .from('profiles')
     .select('id, role, full_name, email, phone, avatar_url, created_at')
   const profiles = new Map(
-    ((profileRows || []) as Profile[]).map(profile => [profile.id, profile]),
+    ((profileRows || []) as Profile[]).map((profile) => [profile.id, profile]),
   )
 
   const users = []
@@ -29,13 +31,15 @@ export async function loadRegisteredAccounts(supabase: SupabaseClient): Promise<
   }
 
   return users
-    .map(user => {
+    .map((user) => {
       const profile = profiles.get(user.id)
-      const metadata = user.user_metadata as { full_name?: unknown; role?: unknown } | undefined
+      const metadata = user.user_metadata as
+        | { full_name?: unknown; role?: unknown }
+        | undefined
       return {
         id: user.id,
         fullName: profile?.full_name || String(metadata?.full_name || ''),
-        email: profile?.email || user.email || null,
+        email: user.email || null,
         phone: profile?.phone || null,
         role: accountRole(savedRole(profile?.role), metadata?.role),
         hasProfile: Boolean(profile),

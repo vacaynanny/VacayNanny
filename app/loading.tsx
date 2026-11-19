@@ -6,7 +6,7 @@ export default function Loading() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: 'rgba(255,255,255,0.45)',
+        color: 'rgba(23,50,77,0.45)',
         fontFamily: 'var(--font-dm-sans), sans-serif',
         fontSize: '0.95rem',
       }}

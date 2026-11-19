@@ -49,7 +49,7 @@ export default function SafeguardingModule({ alreadyComplete }: { alreadyComplet
     return (
       <div className="form-card">
         <h3>Safeguarding complete</h3>
-        <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
+        <p style={{ color: 'rgba(23,50,77,0.7)', lineHeight: 1.7 }}>
           You passed the Elite safeguarding module. Your public profile can show the Gold / Elite badge.
         </p>
       </div>
@@ -62,7 +62,7 @@ export default function SafeguardingModule({ alreadyComplete }: { alreadyComplet
         <>
           <p className="safeguard-step">Module {step + 1} of {SAFEGUARDING_MODULES.length}</p>
           <h3>{lesson.title}</h3>
-          <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 20 }}>{lesson.body}</p>
+          <p style={{ color: 'rgba(23,50,77,0.7)', lineHeight: 1.7, marginBottom: 20 }}>{lesson.body}</p>
           <div className="booking-actions">
             {step > 0 && (
               <button className="btn-ghost" type="button" onClick={() => setStep(s => s - 1)}>Back</button>

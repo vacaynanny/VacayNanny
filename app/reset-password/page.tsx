@@ -7,6 +7,7 @@ import { createSupabaseBrowser } from '@/lib/supabase/browser'
 import { hasSupabaseConfig } from '@/lib/supabase'
 import { getFriendlyAuthError } from '@/lib/auth-errors'
 import Nav from '@/components/Nav'
+import AuthVisual from '@/components/AuthVisual'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -78,19 +79,8 @@ export default function ResetPasswordPage() {
   return (
     <>
       <Nav />
-      <div className="login-stage">
-        <aside className="login-visual">
-          <div className="login-visual-copy">
-            <p className="login-visual-kicker">Holiday childcare</p>
-            <h2>Choose a password you&apos;ll <em>remember</em>.</h2>
-            <p>This replaces the password on the account that requested the reset.</p>
-            <ul className="login-points">
-              <li>At least 8 characters</li>
-              <li>Same account</li>
-              <li>Then you&apos;re signed in</li>
-            </ul>
-          </div>
-        </aside>
+      <main className="login-stage" id="main-content">
+        <AuthVisual />
         <div className="login-panel">
           {!ready ? (
             <div className="auth-card">
@@ -166,7 +156,7 @@ export default function ResetPasswordPage() {
             </form>
           )}
         </div>
-      </div>
+      </main>
     </>
   )
 }

@@ -60,7 +60,7 @@ export default function AdminReviews({ reviews }: { reviews: Review[] }) {
               <span className="review-val">{r.is_published ? 'Live' : 'Pending'}</span>
             </div>
             <div className="posted-review-stars" style={{ marginTop: 8 }}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</div>
-            <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, fontSize: '0.9rem', margin: '8px 0 12px' }}>{r.body}</p>
+            <p style={{ color: 'rgba(23,50,77,0.7)', lineHeight: 1.6, fontSize: '0.9rem', margin: '8px 0 12px' }}>{r.body}</p>
             <div className="booking-actions" style={{ marginTop: 0 }}>
               {r.is_published ? (
                 <button className="btn-ghost" disabled={busy === r.id} onClick={() => act(r.id, 'hide')}>

@@ -6,24 +6,47 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --conditions=react-server --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "setup:local": "node scripts/setup-local.mjs",
+    "setup:check": "tsx scripts/check-setup.ts",
+    "email:preview": "tsx scripts/preview-emails.mts",
+    "dev:review": "tsx tests/preview-server.ts --review",
+    "db:start": "tsx scripts/db-local.mts start",
+    "db:prepare": "tsx scripts/db-local.mts prepare",
+    "db:reset": "tsx scripts/db-local.mts reset",
+    "db:stop": "tsx scripts/db-local.mts stop",
+    "dev:database": "tsx scripts/dev-database.mts",
+    "test:integration": "tsx --conditions=react-server --test tests/*.integration.mts",
+    "db:backup": "tsx scripts/backup-data.mts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.110.7",
-    "next": "16.4.0",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.112.3",
+    "next": "16.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "resend": "^6.17.2"
+    "resend": "^6.17.2",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@next/env": "16.4.6",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.6",
+    "supabase": "3.2.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

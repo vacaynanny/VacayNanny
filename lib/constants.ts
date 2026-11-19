@@ -3,7 +3,7 @@ export const WHATSAPP_DISPLAY = '+254 796 930 612'
 export const SUPPORT_EMAIL = 'hello@vacaynanny.net'
 export const ADMIN_EMAIL = 'hello@vacaynanny.net'
 export const SITE_HOST = 'www.vacaynanny.net'
-export const SITE_URL = `https://${SITE_HOST}`
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || `https://${SITE_HOST}`).replace(/\/$/, '')
 
 export function siteUrl(path = '') {
   const suffix = !path ? '' : path.startsWith('/') ? path : `/${path}`

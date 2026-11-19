@@ -5,6 +5,8 @@ const WINDOW_SECONDS = 60 * 60
 
 const LIMITS = {
   apply: { ip: 5, email: 3 },
+  apply_upload: { ip: 10, email: 5 },
+  payment: { ip: 30, email: 15 },
   booking: { ip: 10, email: 6 },
   contact: { ip: 8, email: 4 },
   waitlist: { ip: 8, email: 3 },
@@ -56,7 +58,11 @@ function missingRateLimitFunction(error: { code?: string; message?: string }): b
   return /consume_rate_limit/i.test(message) || /does not exist/i.test(message)
 }
 
-async function consume(supabase: SupabaseClient, bucket: string, limit: number): Promise<boolean> {
+async function consume(
+  supabase: SupabaseClient,
+  bucket: string,
+  limit: number,
+): Promise<boolean> {
   const { data, error } = await supabase.rpc('consume_rate_limit', {
     p_bucket: bucket,
     p_limit: limit,
@@ -86,7 +92,11 @@ export async function limitRoute(
 ): Promise<NextResponse | null> {
   const spec = LIMITS[route]
   if (!options?.skipIp) {
-    const allowed = await consume(supabase, `${route}:ip:${clientAddress(request)}`, spec.ip)
+    const allowed = await consume(
+      supabase,
+      `${route}:ip:${clientAddress(request)}`,
+      spec.ip,
+    )
     if (!allowed) return tooMany()
   }
   const email = normalizeEmail(options?.email)

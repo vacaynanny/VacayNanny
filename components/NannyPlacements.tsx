@@ -4,7 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import BookingCalendar from '@/components/BookingCalendar'
 import BookingThread from '@/components/BookingThread'
-import { bookingHasThread, careTypeLabel, parseCareType, statusLabel } from '@/lib/booking'
+import {
+  bookingHasThread,
+  careTypeLabel,
+  parseCareType,
+  statusLabel,
+} from '@/lib/booking'
 import type { Booking } from '@/lib/types'
 
 export default function NannyPlacements({ bookings }: { bookings: Booking[] }) {
@@ -36,36 +41,66 @@ export default function NannyPlacements({ bookings }: { bookings: Booking[] }) {
     <>
       <div className="form-card">
         <h3>Availability calendar</h3>
-        <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 16, fontSize: '0.88rem' }}>
+        <p style={{ color: 'rgba(23,50,77,0.5)', marginBottom: 16, fontSize: '0.88rem' }}>
           Highlighted days are placements that block new assignments.
         </p>
         <BookingCalendar bookings={bookings} />
       </div>
       <div className="form-card">
         <h3>Assigned bookings</h3>
-        {error && <p className="field-error-msg" style={{ marginBottom: 12 }}>{error}</p>}
-        {bookings.length === 0 && <p style={{ color: 'rgba(255,255,255,0.5)' }}>No assignments yet.</p>}
-        {bookings.map(b => {
-          const awaiting = Boolean(b.nanny_id) && b.nanny_response !== 'accepted' && b.nanny_response !== 'declined'
-            && (b.status === 'pending' || b.status === 'matched' || b.status === 'confirmed' || b.status === 'in_progress')
+        {error && (
+          <p className="field-error-msg" style={{ marginBottom: 12 }}>
+            {error}
+          </p>
+        )}
+        {bookings.length === 0 && (
+          <p style={{ color: 'rgba(23,50,77,0.5)' }}>No assignments yet.</p>
+        )}
+        {bookings.map((b) => {
+          const awaiting =
+            (b.my_response ?? b.nanny_response) !== 'accepted' &&
+            (b.my_response ?? b.nanny_response) !== 'declined' &&
+            (b.status === 'pending' || b.status === 'matched' || b.status === 'confirmed')
           return (
-            <div key={b.id} style={{ padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div
+              key={b.id}
+              style={{ padding: '12px 0', borderBottom: '1px solid rgba(23,50,77,0.06)' }}
+            >
               <div className="review-row">
                 <span className="review-key">
                   {b.destination} · {b.check_in} → {b.check_out}
                   <br />
-                  <small>{b.parent_name} · {statusLabel(b.status)} · {careTypeLabel(parseCareType(b.care_type))}</small>
+                  <small>
+                    {b.parent_name} · {statusLabel(b.status)} ·{' '}
+                    {careTypeLabel(parseCareType(b.care_type))}
+                  </small>
                 </span>
                 <span className="review-val">{b.children_count || ''} children</span>
               </div>
               {awaiting && (
                 <div className="booking-actions">
-                  <button className="btn-coral" disabled={busy === b.id} onClick={() => act(b.id, 'accept')}>Accept</button>
-                  <button className="btn-ghost" disabled={busy === b.id} onClick={() => act(b.id, 'decline')}>Decline</button>
+                  <button
+                    className="btn-coral"
+                    disabled={busy === b.id}
+                    onClick={() => act(b.id, 'accept')}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="btn-ghost"
+                    disabled={busy === b.id}
+                    onClick={() => act(b.id, 'decline')}
+                  >
+                    Decline
+                  </button>
                 </div>
               )}
               {bookingHasThread(b) && (
-                <BookingThread bookingId={b.id} viewerRole="nanny" counterpartName={b.parent_name} />
+                <BookingThread
+                  bookingId={b.id}
+                  viewerRole="nanny"
+                  counterpartName={b.parent_name}
+                />
               )}
             </div>
           )

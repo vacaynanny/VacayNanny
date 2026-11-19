@@ -8,7 +8,11 @@ import type { Nanny } from '@/lib/types'
 
 const DAY_SET = new Set<string>(DAYS_OF_WEEK)
 
-function parseStringList(raw: unknown, allowed: Set<string>, extraAllowed: string[] = []) {
+function parseStringList(
+  raw: unknown,
+  allowed: Set<string>,
+  extraAllowed: string[] = [],
+) {
   const extras = new Set(extraAllowed)
   let values: unknown[] = []
   if (typeof raw === 'string' && raw.trim()) {
@@ -33,10 +37,17 @@ function parseStringList(raw: unknown, allowed: Set<string>, extraAllowed: strin
 export async function PATCH(request: NextRequest) {
   try {
     if (!hasSupabaseConfig() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return NextResponse.json({ error: 'Profile storage is not configured yet.' }, { status: 503 })
+      return NextResponse.json(
+        { error: 'Profile storage is not configured yet.' },
+        { status: 503 },
+      )
     }
     const profile = await getCurrentProfile()
-    if (!profile) return NextResponse.json({ error: 'Sign in to edit your profile.' }, { status: 401 })
+    if (!profile)
+      return NextResponse.json(
+        { error: 'Sign in to edit your profile.' },
+        { status: 401 },
+      )
     if (profile.role !== 'nanny' && profile.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -49,7 +60,10 @@ export async function PATCH(request: NextRequest) {
     const file = photo instanceof File && photo.size > 0 ? photo : null
 
     if (bio.length > 2000) {
-      return NextResponse.json({ error: 'Bio is too long (2000 characters max).' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Bio is too long (2000 characters max).' },
+        { status: 400 },
+      )
     }
     const imageError = validateProfileImage(file)
     if (imageError) return NextResponse.json({ error: imageError }, { status: 400 })
@@ -61,16 +75,35 @@ export async function PATCH(request: NextRequest) {
       .eq('user_id', profile.id)
       .maybeSingle()
     if (loadErr) return NextResponse.json({ error: loadErr.message }, { status: 500 })
-    if (!nanny) return NextResponse.json({ error: 'Your public profile is not live yet.' }, { status: 404 })
+    if (!nanny)
+      return NextResponse.json(
+        { error: 'Your public profile is not live yet.' },
+        { status: 404 },
+      )
 
     const current = nanny as Nanny
-    const { data: destRows } = await supabase.from('destinations').select('name').eq('is_active', true)
+    if (current.is_suspended)
+      return NextResponse.json(
+        { error: 'Your profile is suspended. Contact VacayNanny for a review.' },
+        { status: 403 },
+      )
+    const { data: destRows } = await supabase
+      .from('destinations')
+      .select('name')
+      .eq('is_active', true)
     const catalog = destinationNames((destRows || []) as { name: string }[])
     const destSet = new Set(catalog)
     const availableDays = parseStringList(form.get('availableDays'), DAY_SET)
-    const destinations = parseStringList(form.get('destinations'), destSet, current.destinations || [])
+    const destinations = parseStringList(
+      form.get('destinations'),
+      destSet,
+      current.destinations || [],
+    )
     if (destinations.length === 0) {
-      return NextResponse.json({ error: 'Select at least one destination.' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Select at least one destination.' },
+        { status: 400 },
+      )
     }
 
     const updates: Record<string, unknown> = {
@@ -90,10 +123,15 @@ export async function PATCH(request: NextRequest) {
       .update(updates)
       .eq('id', current.id)
       .eq('user_id', profile.id)
+      .eq('is_suspended', false)
       .select('*')
       .maybeSingle()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    if (!data) return NextResponse.json({ error: 'Could not update this profile.' }, { status: 404 })
+    if (!data)
+      return NextResponse.json(
+        { error: 'Could not update this profile.' },
+        { status: 404 },
+      )
 
     return NextResponse.json({ success: true, nanny: data })
   } catch (err) {

@@ -1,0 +1,52 @@
+# Used only by scripts/db-local.mts in the ignored artifacts/supabase-local folder.
+project_id = "vacaynanny-local"
+
+[api]
+enabled = true
+port = 56321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+auto_expose_new_tables = true
+
+[db]
+port = 56322
+shadow_port = 56320
+major_version = 17
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[local_smtp]
+enabled = true
+port = 56324
+
+[storage]
+enabled = true
+file_size_limit = "8MiB"
+
+[storage.vector]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://localhost:3102"
+additional_redirect_urls = ["http://localhost:3102/auth/callback", "http://127.0.0.1:3102/auth/callback"]
+minimum_password_length = 12
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enabled = true
+enable_confirmations = true
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false

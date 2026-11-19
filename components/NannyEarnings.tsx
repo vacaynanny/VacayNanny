@@ -23,7 +23,7 @@ export default function NannyEarnings({ bookings }: { bookings: Booking[] }) {
         </div>
       </div>
       {completed.length === 0 && (
-        <p style={{ color: 'rgba(255,255,255,0.5)', marginTop: 8 }}>No completed placements yet.</p>
+        <p style={{ color: 'rgba(23,50,77,0.5)', marginTop: 8 }}>No completed placements yet.</p>
       )}
       {completed.map(b => (
         <div className="review-row" key={b.id}>

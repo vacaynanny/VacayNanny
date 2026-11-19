@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createSupabaseServer } from '@/lib/supabase/server'
+import { createServerClient } from '@/lib/supabase'
+import { emailOwnershipProven } from '@/lib/booking-ownership'
 import { SITE_URL } from '@/lib/constants'
 
 function safeNext(path: string | null, fallback = '/account') {
@@ -21,9 +23,16 @@ export async function GET(request: Request) {
   // Handle auth errors with user-friendly messages
   if (authError) {
     const errorParams = new URLSearchParams()
-    if (authError === 'access_denied' || authError === 'expired_token' || authError === 'invalid_token') {
+    if (
+      authError === 'access_denied' ||
+      authError === 'expired_token' ||
+      authError === 'invalid_token'
+    ) {
       errorParams.set('error', 'expired')
-      errorParams.set('message', 'This confirmation link has expired or is invalid. Please request a new one.')
+      errorParams.set(
+        'message',
+        'This confirmation link has expired or is invalid. Please request a new one.',
+      )
     } else if (authError === 'email_not_confirmed') {
       errorParams.set('error', 'unconfirmed')
       errorParams.set('message', 'Please confirm your email address first.')
@@ -42,10 +51,16 @@ export async function GET(request: Request) {
       const errorParams = new URLSearchParams()
       if (error.message.includes('expired') || error.message.includes('invalid')) {
         errorParams.set('error', 'expired')
-        errorParams.set('message', 'This confirmation link has expired. Please request a new one from the sign-up page.')
+        errorParams.set(
+          'message',
+          'This confirmation link has expired. Please request a new one from the sign-up page.',
+        )
       } else {
         errorParams.set('error', 'invalid')
-        errorParams.set('message', 'We couldn\'t confirm your email. Please try again or request a new link.')
+        errorParams.set(
+          'message',
+          "We couldn't confirm your email. Please try again or request a new link.",
+        )
       }
       return NextResponse.redirect(`${SITE_URL}/login?${errorParams.toString()}`)
     }
@@ -54,10 +69,24 @@ export async function GET(request: Request) {
     if (error) {
       const errorParams = new URLSearchParams()
       errorParams.set('error', 'invalid')
-      errorParams.set('message', 'This link is invalid or has expired. Please request a new one.')
+      errorParams.set(
+        'message',
+        'This link is invalid or has expired. Please request a new one.',
+      )
       return NextResponse.redirect(`${SITE_URL}/login?${errorParams.toString()}`)
     }
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (user && emailOwnershipProven(user)) {
+    try {
+      await createServerClient().rpc('claim_nanny_applications', {
+        p_actor: user.id,
+        p_verified_email: user.email,
+      })
+    } catch {}
+  }
   return NextResponse.redirect(`${SITE_URL}${next}`)
 }

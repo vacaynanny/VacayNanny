@@ -1,0 +1,44 @@
+.root {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #e6eadf;
+}
+.frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.4s ease-in-out;
+}
+.active { opacity: 1; }
+.pause {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid #fff8efb3;
+  border-radius: 30px;
+  background: #fff8efed;
+  color: #17324d;
+  font: inherit;
+  font-size: .7rem;
+  cursor: pointer;
+}
+.pause:hover { background: #fff8ef; }
+.pause:focus-visible { outline: 2px solid #17324d; outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .frame { transition: none; }
+  .pause { display: none; }
+}

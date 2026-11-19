@@ -28,7 +28,7 @@ export default async function SafeguardingPage() {
         {!nanny && (
           <div className="form-card">
             <h3>Profile not live yet</h3>
-            <p style={{ color: 'rgba(255,255,255,0.55)', marginTop: 8 }}>
+            <p style={{ color: 'rgba(23,50,77,0.55)', marginTop: 8 }}>
               Finish vetting first. Once your profile is approved, return here to complete safeguarding.
             </p>
           </div>

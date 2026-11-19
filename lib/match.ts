@@ -1,7 +1,12 @@
 import { bookingBlocksAvailability, datesOverlap, parseCareType } from '@/lib/booking'
 import { DESTINATIONS, normalizeTier } from '@/lib/constants'
 import { publicTier } from '@/lib/safeguarding'
-import type { Booking, BookingStatus, CareType, Nanny, NannyTier } from '@/lib/types'
+import {
+  nannyWorksDates,
+  childCapacity,
+  requiredCapacity,
+} from '@/lib/booking-validation'
+import type { Booking, BookingStatus, CareType, Nanny } from '@/lib/types'
 
 export const CERTIFICATION_FILTERS = [
   { id: 'first-aid', label: 'First Aid' },
@@ -19,6 +24,8 @@ export type NannySearchFilters = {
   q?: string
   infant?: boolean
   cert?: string
+  checkIn?: string
+  checkOut?: string
   busyIds?: Iterable<string>
   /** When set, "willing to travel in Kenya" matches these names. Omit only for the no-database demo list. */
   kenyaDestinations?: string[]
@@ -33,6 +40,8 @@ export type MatchRequest = {
   notes?: string | null
   careType?: CareType | string | null
   infantRequired?: boolean
+  childrenCount?: string | null
+  nanniesNeeded?: string | null
   excludeBookingId?: string | null
   excludeNannyIds?: Array<string | null | undefined>
   kenyaDestinations?: string[]
@@ -46,6 +55,7 @@ export type ClashRow = {
   status: BookingStatus
   nanny_response?: string | null
   parent_name?: string | null
+  booking_assignments?: Array<{ nanny_id: string }>
 }
 
 export type MatchResult = {
@@ -57,10 +67,11 @@ export type MatchResult = {
 }
 
 const KENYA_DESTINATIONS = new Set(
-  DESTINATIONS.filter(d => d !== 'Zanzibar').map(d => d.toLowerCase()),
+  DESTINATIONS.filter((d) => d !== 'Zanzibar').map((d) => d.toLowerCase()),
 )
 
-const INFANT_RE = /\b(infant|newborn|baby|0\s*[–-]\s*12|0\s*[–-]\s*3\s*month|under\s*1)\b/i
+const INFANT_RE =
+  /\b(infant|newborn|baby|0\s*[–-]\s*12|0\s*[–-]\s*3\s*month|under\s*1)\b/i
 const TODDLER_RE = /\b(toddler|1\s*[–-]\s*2|1\s*[–-]\s*3)\b/i
 
 function haystack(nanny: Nanny): string {
@@ -75,31 +86,34 @@ function haystack(nanny: Nanny): string {
     ...nanny.services,
     ...nanny.certifications,
     ...nanny.tags,
-  ].filter(Boolean).join(' ').toLowerCase()
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
 }
 
 function blob(nanny: Nanny): string {
-  return [
-    ...nanny.certifications,
-    ...nanny.tags,
-    ...nanny.services,
-    ...nanny.age_groups,
-    nanny.bio || '',
-  ].join(' ').toLowerCase()
+  return [...nanny.certifications, ...nanny.tags, ...nanny.services, ...nanny.age_groups]
+    .join(' ')
+    .toLowerCase()
 }
 
 export function hasInfantCare(nanny: Nanny): boolean {
-  return INFANT_RE.test(blob(nanny)) || nanny.age_groups.some(g => INFANT_RE.test(g))
+  return INFANT_RE.test(blob(nanny)) || nanny.age_groups.some((g) => INFANT_RE.test(g))
 }
 
-export function bookingNeedsInfant(request: Pick<MatchRequest, 'youngestAge' | 'notes' | 'infantRequired'>): boolean {
+export function bookingNeedsInfant(
+  request: Pick<MatchRequest, 'youngestAge' | 'notes' | 'infantRequired'>,
+): boolean {
   if (request.infantRequired) return true
   const age = String(request.youngestAge || '')
   if (/under\s*1|0\s*[–-]\s*12|newborn|infant/i.test(age)) return true
   return INFANT_RE.test(String(request.notes || ''))
 }
 
-export function parseCertificationFilter(value?: string | null): CertificationFilterId | null {
+export function parseCertificationFilter(
+  value?: string | null,
+): CertificationFilterId | null {
   const id = String(value || '').toLowerCase()
   switch (id) {
     case 'first-aid':
@@ -123,8 +137,11 @@ export function hasCertification(nanny: Nanny, cert: CertificationFilterId): boo
     case 'cpr':
       return /\bcpr\b/.test(text)
     case 'paediatric':
-      return /paediatric|pediatric/.test(text)
-        || ((nanny.tier === 'silver' || nanny.tier === 'gold') && /first\s*-?\s*aid/.test(text))
+      return (
+        /paediatric|pediatric/.test(text) ||
+        ((nanny.tier === 'silver' || nanny.tier === 'gold') &&
+          /first\s*-?\s*aid/.test(text))
+      )
     case 'ecd':
       return /\becd\b|montessori|early\s*child/.test(text)
     case 'nursing':
@@ -136,17 +153,29 @@ export function hasCertification(nanny: Nanny, cert: CertificationFilterId): boo
   }
 }
 
-function coversDestination(nanny: Nanny, destination?: string | null, kenyaNames?: string[]): 'exact' | 'travel' | 'none' {
+function coversDestination(
+  nanny: Nanny,
+  destination?: string | null,
+  kenyaNames?: string[],
+): 'exact' | 'travel' | 'none' {
   const dest = String(destination || '').trim()
-  if (!dest || dest.toLowerCase() === 'other' || dest.toLowerCase() === 'any') return 'exact'
+  if (!dest || dest.toLowerCase() === 'other' || dest.toLowerCase() === 'any')
+    return 'exact'
   const needle = dest.toLowerCase()
-  if (nanny.destinations.some(d => d.toLowerCase() === needle || d.toLowerCase().includes(needle) || needle.includes(d.toLowerCase()))) {
+  if (
+    nanny.destinations.some(
+      (d) =>
+        d.toLowerCase() === needle ||
+        d.toLowerCase().includes(needle) ||
+        needle.includes(d.toLowerCase()),
+    )
+  ) {
     return 'exact'
   }
   const travel = (nanny.willing_to_travel || '').toLowerCase()
   if (travel === 'international') return 'travel'
   const kenya = kenyaNames
-    ? new Set(kenyaNames.map(name => name.trim().toLowerCase()).filter(Boolean))
+    ? new Set(kenyaNames.map((name) => name.trim().toLowerCase()).filter(Boolean))
     : KENYA_DESTINATIONS
   if (travel === 'kenya' && kenya.has(needle)) return 'travel'
   return 'none'
@@ -162,12 +191,13 @@ function skillNeedles(request: MatchRequest): string[] {
   if (/tutor|homework|school/.test(notes)) found.push('tutor')
   if (/travel|flight|safari/.test(notes)) found.push('travel')
   if (/cook|meal|allerg/.test(notes)) found.push('cook')
-  if (TODDLER_RE.test(String(request.youngestAge || '')) || TODDLER_RE.test(notes)) found.push('toddler')
+  if (TODDLER_RE.test(String(request.youngestAge || '')) || TODDLER_RE.test(notes))
+    found.push('toddler')
   return found
 }
 
 function nannyHasSkill(nanny: Nanny, skill: string): boolean {
-  return haystack(nanny).includes(skill)
+  return blob(nanny).includes(skill)
 }
 
 export function nannyClash(
@@ -177,38 +207,61 @@ export function nannyClash(
   bookings: ClashRow[],
   excludeBookingId?: string | null,
 ): ClashRow | undefined {
-  return bookings.find(other =>
-    other.nanny_id === nannyId
-    && other.id !== excludeBookingId
-    && bookingBlocksAvailability(other.status, other.nanny_response)
-    && datesOverlap(checkIn, checkOut, other.check_in, other.check_out),
+  return bookings.find(
+    (other) =>
+      (other.nanny_id === nannyId ||
+        other.booking_assignments?.some((a) => a.nanny_id === nannyId)) &&
+      other.id !== excludeBookingId &&
+      bookingBlocksAvailability(other.status, other.nanny_response) &&
+      datesOverlap(checkIn, checkOut, other.check_in, other.check_out),
   )
 }
 
 export function filterNannies(list: Nanny[], filters: NannySearchFilters): Nanny[] {
   const dest = String(filters.destination || '').trim()
-  const tier = normalizeTier(filters.tier || '') 
-  const q = String(filters.q || '').trim().toLowerCase()
+  const tier = normalizeTier(filters.tier || '')
+  const q = String(filters.q || '')
+    .trim()
+    .toLowerCase()
   const cert = parseCertificationFilter(filters.cert)
   const busy = filters.busyIds ? new Set(filters.busyIds) : null
 
-  return list.filter(n => {
-    if (dest && dest.toLowerCase() !== 'any' && coversDestination(n, dest, filters.kenyaDestinations) === 'none') return false
+  return list.filter((n) => {
+    if (
+      dest &&
+      dest.toLowerCase() !== 'any' &&
+      coversDestination(n, dest, filters.kenyaDestinations) === 'none'
+    )
+      return false
     if (tier && publicTier(n) !== tier) return false
     if (filters.infant && !hasInfantCare(n)) return false
     if (cert && !hasCertification(n, cert)) return false
     if (busy?.has(n.id)) return false
+    if (
+      filters.checkIn &&
+      filters.checkOut &&
+      !nannyWorksDates(n, filters.checkIn, filters.checkOut)
+    )
+      return false
     if (q && !haystack(n).includes(q)) return false
     return true
   })
 }
 
-export function scoreNannyMatch(nanny: Nanny, request: MatchRequest, bookings: ClashRow[]): MatchResult {
+export function scoreNannyMatch(
+  nanny: Nanny,
+  request: MatchRequest,
+  bookings: ClashRow[],
+): MatchResult {
   const reasons: string[] = []
   const blockers: string[] = []
   let score = Math.round((nanny.rating_avg || 0) * 2)
 
-  const destCover = coversDestination(nanny, request.destination, request.kenyaDestinations)
+  const destCover = coversDestination(
+    nanny,
+    request.destination,
+    request.kenyaDestinations,
+  )
   if (destCover === 'exact') {
     score += 40
     if (request.destination) reasons.push(String(request.destination))
@@ -222,17 +275,30 @@ export function scoreNannyMatch(nanny: Nanny, request: MatchRequest, bookings: C
   const checkIn = request.checkIn
   const checkOut = request.checkOut
   if (checkIn && checkOut) {
-    const clash = nannyClash(nanny.id, checkIn, checkOut, bookings, request.excludeBookingId)
+    const clash = nannyClash(
+      nanny.id,
+      checkIn,
+      checkOut,
+      bookings,
+      request.excludeBookingId,
+    )
     if (clash) {
-      blockers.push(clash.parent_name
-        ? `Busy: ${clash.parent_name} (${clash.check_in} → ${clash.check_out})`
-        : 'Busy on those dates')
+      blockers.push(
+        clash.parent_name
+          ? `Busy: ${clash.parent_name} (${clash.check_in} → ${clash.check_out})`
+          : 'Busy on those dates',
+      )
     } else {
       score += 20
       reasons.push('free on dates')
     }
   }
 
+  if (
+    parseCareType(request.careType) === 'overnight' &&
+    !nannyHasSkill(nanny, 'overnight')
+  )
+    blockers.push('No verified overnight care service')
   const infantNeeded = bookingNeedsInfant(request)
   if (infantNeeded) {
     if (hasInfantCare(nanny)) {
@@ -256,15 +322,20 @@ export function scoreNannyMatch(nanny: Nanny, request: MatchRequest, bookings: C
     if (shownTier === wantedTier) {
       score += 10
       reasons.push(`${wantedTier} tier`)
-    } else if (tierRank(shownTier) > tierRank(wantedTier)) {
-      score += 4
+    } else {
+      blockers.push('Does not match the requested care tier')
     }
   }
 
   const excluded = new Set((request.excludeNannyIds || []).filter(Boolean) as string[])
   if (excluded.has(nanny.id)) blockers.push('Already replaced on this booking')
 
-  if (!nanny.is_active) blockers.push('Profile hidden')
+  if (!nanny.is_active || nanny.is_suspended) blockers.push('Profile unavailable')
+  if (checkIn && checkOut && !nannyWorksDates(nanny, checkIn, checkOut))
+    blockers.push('Not available every requested day')
+  const capacity = requiredCapacity(request.childrenCount, request.nanniesNeeded || '1')
+  if (capacity && capacity > childCapacity(nanny))
+    blockers.push('More children than this nanny can care for')
 
   return {
     nanny,
@@ -275,28 +346,13 @@ export function scoreNannyMatch(nanny: Nanny, request: MatchRequest, bookings: C
   }
 }
 
-function tierRank(tier: NannyTier): number {
-  switch (tier) {
-    case 'bronze':
-      return 1
-    case 'silver':
-      return 2
-    case 'gold':
-      return 3
-    default: {
-      const _never: never = tier
-      return _never
-    }
-  }
-}
-
 export function rankNannyMatches(
   nannies: Nanny[],
   request: MatchRequest,
   bookings: ClashRow[],
 ): MatchResult[] {
   return nannies
-    .map(nanny => scoreNannyMatch(nanny, request, bookings))
+    .map((nanny) => scoreNannyMatch(nanny, request, bookings))
     .sort((a, b) => {
       if (a.eligible !== b.eligible) return a.eligible ? -1 : 1
       return b.score - a.score
@@ -308,15 +364,29 @@ export function bestAvailableMatch(
   request: MatchRequest,
   bookings: ClashRow[],
 ): MatchResult | null {
-  return rankNannyMatches(nannies, request, bookings).find(r => r.eligible) ?? null
+  return rankNannyMatches(nannies, request, bookings).find((r) => r.eligible) ?? null
 }
 
-export function matchRequestFromBooking(booking: Pick<
-  Booking,
-  'destination' | 'check_in' | 'check_out' | 'tier' | 'youngest_age' | 'notes' | 'care_type' | 'id' | 'replaced_nanny_id'
->): MatchRequest {
+export function matchRequestFromBooking(
+  booking: Pick<
+    Booking,
+    | 'destination'
+    | 'check_in'
+    | 'check_out'
+    | 'tier'
+    | 'youngest_age'
+    | 'notes'
+    | 'care_type'
+    | 'id'
+    | 'replaced_nanny_id'
+    | 'children_count'
+    | 'nannies_needed'
+  >,
+): MatchRequest {
   return {
     destination: booking.destination,
+    childrenCount: booking.children_count,
+    nanniesNeeded: booking.nannies_needed,
     checkIn: booking.check_in,
     checkOut: booking.check_out,
     tier: booking.tier,

@@ -43,3 +43,16 @@ next-env.d.ts
 .idea
 .claude
 .cursor
+
+.npm-cache/
+/test-results/
+/playwright-report/
+/.next-tests/
+
+/artifacts/
+
+/.next-localdb/
+
+# Supabase CLI state is local to this checkout
+/supabase/.temp/
+/supabase/.branches/

@@ -14,7 +14,7 @@ export const revalidate = 60
 export default async function NanniesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkIn?: string; checkOut?: string }>
+  searchParams: Promise<{ checkIn?: string; checkOut?: string; destination?: string; tier?: string; q?: string; infant?: string; cert?: string }>
 }) {
   const params = await searchParams
   const [nannies, destinations, busyIds] = await Promise.all([
@@ -25,6 +25,7 @@ export default async function NanniesPage({
   return (
     <Suspense>
       <NanniesBrowser
+        key={JSON.stringify(params)}
         initial={nannies}
         destinations={destinationNames(destinations)}
         kenyaNames={destinations.filter(d => d.country.toLowerCase() === 'kenya').map(d => d.name)}
